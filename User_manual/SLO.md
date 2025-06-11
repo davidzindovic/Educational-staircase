@@ -17,8 +17,8 @@ Opozorila:
 
 - USB ključek mora biti imenovan "stopnice"
   - USB ključek lahko preimenujete tako, da:
-    1. odprete Raziskovalec (ikona z mapico)
-    2.  na levi strani najdete vstavljen USB ključek
+    * odprete Raziskovalec (ikona z mapico)
+    * na levi strani najdete vstavljen USB ključek
     3.  enkrat z levim klikom kliknete na USB ključek
     4.  enkrat z desnim klikom kliknete na USB ključek
     5.  v oknu izberete "Preimenuj"
