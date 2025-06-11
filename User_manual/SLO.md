@@ -14,7 +14,25 @@ Opozorila:
     * na dnu okenca kliknete "Lastnosti".
     * Če vidite kje napisano ".mp3", potem je datoteka pripravljena
   - V primeru, da vaša datoteka ni v formatu MP3, lahko vašo datoteko pretvorite v MP3 s pomočjo https://online-audio-converter.com/
+***
+# Vizualni učinki
+Datoteke za vizualne učinke se bodo predvajale glede na vaša navodila na USB ključku.
+Možni vizualni učinki oz. aplikacije so:
+- Enostavno mešanje barv
+- Kompleksno mešanje barv
+- Enačba
+- Povezovanje slik in besed
+- Stopmotion
+- Slideshow
 
+Opozorilo: Za izbiro barve uporabite: https://g.co/kgs/LrNHnkX . S pomočjo okna in drsnika izberite barvo in prekopirajte napis zapisan pod "HEX" (npr. #fcba03).
+
+Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze v obliki, ki je primerna za aplikacijo:
+- Enostavno mešanje barv: `barve:simple;število_možnih_vnosov!barva_hex_1,barva_hex_2`
+- - Do vsake izmed napisanih HEX barv lahko dostopamo z eno stopnico.
+- - primer: `barve:simple;3!#eb4034,#eb4034,#495446,#aba295,#8a6a91`
+
+Opozorila:
 - USB ključek mora biti imenovan "stopnice"
   - USB ključek lahko preimenujete tako, da:
     * odprete Raziskovalec (ikona z mapico)
