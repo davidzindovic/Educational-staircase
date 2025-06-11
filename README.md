@@ -1,15 +1,33 @@
-To do:
-- medtem ko prikazuje sliko je zmožen prejeti vnos
-- možnost izbire da se vprašanje ponavlja dokler odgovor ni pravilen
-- preizkus vnosa preko BT
+#Musical stairs with video effects
+This project was constructed for use on the Faculty of Education, University of Ljubljana. The goal was to create attachable hardware to put onto an existing staircase with 2 turn and 25 steps.
+Input data is processed by an ESP32, musical effects are played from an SD card with the help od MP3-TF player and visual effects are displayed on a projection/ screen via Raspberry Pi.
+Data is transmitted from the ESP32 to RPI via Bluetooth.
+***
+##Hardware
+- ESP32
+- MP3-TF player module
+- Mux 4051
+- Raspberry Pi 5
+***
+##Software
+The software portion is devided onto ESP32 code written in C and RPI code written in Python. RPI is running Raspbian OS.
+###ESP32
+Required libraries (in "Libraries" folder):
+- CD74HC4051E_lib           (for Mux control - up to 42 inputs)
+- DFPlayerMini_Fast-master  (for MP3 player control)
 
-
-- Preizkusi response time če si že v Loopu za canvas
-- Ugotovi kako se skripta autostarta ob bootu
-
-//Dodaj da se s tipko regulira glasnost (+,-). Na voljo sta 2 inputa.
-Zadeva dela, lah se poigra se mal z indeksi v knjiznici
-
-https://www.dfrobot.com/product-1590.html
-
-https://pdf1.alldatasheet.com/datasheet-pdf/view/26969/TI/CD74HC4051E.html
+###Raspberry Pi
+- Python 3.12
+- os
+- PIL
+- tkinter
+- matplotlib
+- opencv
+- numpy
+- time
+- threading
+- vlc
+- glob
+- ctypes
+- queue
+- bluetooth
