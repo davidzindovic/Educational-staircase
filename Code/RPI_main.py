@@ -126,6 +126,8 @@ def create_image_grid(folder_path,naloga, user_input, file_number, gap=10, scale
         check_image_path = os.path.join(folder_path, "check.JPG")
         wrong_image_path = os.path.join(folder_path, "wrong.JPG")
 
+
+
         if user_input!="q":
             if str(user_input) == str(file_number):
                 check_image = Image.open(check_image_path).convert("RGBA")
@@ -149,8 +151,8 @@ def create_image_grid(folder_path,naloga, user_input, file_number, gap=10, scale
         return final_image
     else:
         return 0
-'''
-def display_fullscreen_image(image, iinput):
+
+def display_fullscreen_image_besedilna(image, iinput):
     global root, img, shared_state
     
     if shared_state["present"]==True:
@@ -187,7 +189,7 @@ def display_fullscreen_image(image, iinput):
         
 
         #root.mainloop()
-'''
+
 def close_img():
     global user_input,root
     user_input=rx_and_echo() 
@@ -241,6 +243,8 @@ def besedilna_main(path_za_slike, naloga, resitev):
     if file_number is None:
         print("Error: Could not load the number from the file.")
         return
+    
+    user_input=rx_and_echo()
     
     if shared_state["present"]:
         combined_image = create_image_grid(folder_path, naloga, user_input, file_number)
@@ -420,8 +424,19 @@ def enacba_main(path_za_slike, naloga, resitev):
         # Create OpenCV window first
         cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        hide_loading_screen()
+        
         display_slike(image_paths)
         complete_window_transition("Image Display")  # Pass window name
+    
+        #num_underscores=equation_parts.count('_')
+        underscore_index=0
+        for u in range(len(equation_parts)):
+            if equation_parts[u]=='_':
+                underscore_index=u
+                break
+            u+=1
     
         # User input handling
         index_update = 0
@@ -432,13 +447,14 @@ def enacba_main(path_za_slike, naloga, resitev):
                 cifra_odg = rx_and_echo()
                 if (cifra_odg > 9):
                     cifra_odg = 99
+
             if shared_state["present"]:
                 user_input = str(cifra_odg)
                 user_answer += pow(10, len(correct_answer)-(index_update+1))*int(user_input)
-                image_paths[underscore_index + index_update] = os.path.join(image_folder, user_input + ".JPG")
+                image_paths[underscore_index+index_update] = os.path.join(image_folder, user_input + ".JPG")
                 index_update += 1
                 display_slike(image_paths)
-        
+
         # Show result
         if shared_state["present"]:
             if int(user_answer) == int(correct_answer):
@@ -447,10 +463,11 @@ def enacba_main(path_za_slike, naloga, resitev):
                 image_paths.append(os.path.join(image_folder, "wrong.JPG"))
             display_slike(image_paths, reserve_space=False)
             cv2.waitKey(cakanje_pri_prikazu_pravilnega_rezultata*1000)
-    
+
     finally:
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
         show_loading_screen(0.1)
+        cv2.destroyAllWindows()
 #-----------------------ENAČBE KONC-------------------------------------
 
 #----------------------BARVE -------------------------------------
@@ -548,6 +565,7 @@ def plot_colors(colors):
                 start_x + len(selected_indices)*spacing + box_size//2, start_y - 30,
                 text="Result", font=("Arial", 16)
             )
+        
     
     def input_handler():
         nonlocal selected_indices, reset_count
@@ -567,6 +585,9 @@ def plot_colors(colors):
             if 1 <= selected_index <= len(colors):
                 selected_indices.append(selected_index)
                 root.after(0, update_display)
+        print("??")
+    
+    hide_loading_screen()
     
     # Start with empty display
     update_display()
@@ -577,6 +598,7 @@ def plot_colors(colors):
     input_thread.start()
     
     root.mainloop()
+    print("neki")
 
 def complex_barvanje(colors):
     """Interactive color mixing with persistent window"""
@@ -600,7 +622,7 @@ def complex_barvanje(colors):
     )
     canvas.create_text(550, 250, text="Current Color", font=("Arial", 24))
     reset_count = 0  # Initialize reset counter
-    
+    hide_loading_screen()
     def update_display():
         nonlocal current_color, reset_count
         
@@ -644,19 +666,22 @@ def barve_main(mode, attempts, colors_all):
     
     try:
         colors = colors_all.split(',')
-        root = tk.Tk()
-        root.attributes('-fullscreen', True)
+        #root = tk.Tk()
+        #root.attributes('-fullscreen', True)
         
         if mode == "simple":
             plot_colors(colors)
+            print("bb")
         elif mode == "complex":
             complex_barvanje(colors)
             
-        complete_window_transition(root)  # Pass the new window
-        root.mainloop()
+        #complete_window_transition(root)  # Pass the new window
+        #root.mainloop()
         
     finally:
-        show_loading_screen(0.1)
+        print("aa")
+        #show_loading_screen(0.1)
+    print("!!!")
 #------------------------BARVE KONC-------------------------------------
 
 #------------------------STOPMOTION------------------------------------- 
@@ -958,7 +983,7 @@ def slideshow_main(folder_name, mode, image_time):
         cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         
         hide_loading_screen()
-        
+        '''
         # Display first image
         if files:
             first_file = os.path.join(folder_name, files[0])
@@ -968,7 +993,7 @@ def slideshow_main(folder_name, mode, image_time):
                 complete_window_transition('Slideshow')
             elif first_file.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3]:
                 play_video(first_file)
-        
+        '''
         process_slideshow(folder_name.strip(),mode,image_time)
         
     finally:
@@ -1122,7 +1147,8 @@ def display_image_with_borders(image_path, display_time):
     cv2.imshow('Display', canvas)
     cv2.waitKey(int(display_time * 1000))
     cv2.destroyAllWindows()
-    
+
+'''    
 def display_fullscreen_image(image, iinput):
     global root, img, shared_state, persistent_root
     
@@ -1139,6 +1165,51 @@ def display_fullscreen_image(image, iinput):
         root.attributes('-topmost', True)
         img = ImageTk.PhotoImage(image)
         label = tk.Label(root, image=img)
+        label.pack()
+        
+        # Now synchronize the transition
+        hide_loading_screen_after_new_window(root)
+        
+        if iinput == 1 and shared_state["present"]:
+            input_thread = threading.Thread(target=close_img)
+            input_thread.daemon = True
+            input_thread.start()
+            root.mainloop()
+        elif not shared_state["present"]:
+            root.after(1, root.destroy)
+            root.mainloop()
+        elif iinput == 0:
+            root.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, root.destroy)
+            root.mainloop()
+'''
+def display_fullscreen_image(image, iinput):
+    global root, img_tk, shared_state, persistent_root
+    
+    if 'root' in globals() and isinstance(root,tk.Tk):
+        try:
+            root.withdraw()
+            root.quit()
+            for child in root.winfo_children():
+                child.destroy()
+            root.destroy()
+        except Exception as e:
+            root=None
+            
+    root=tk.Tk()
+    if shared_state["present"]:
+        #try:
+        #    if root:
+        #        root.destroy()
+        #except:
+        #    pass
+        
+        # Create new window but don't show it yet
+        #root = tk.Tk()
+        
+        root.attributes('-fullscreen', True)
+        root.attributes('-topmost', True)
+        img_tk = ImageTk.PhotoImage(image)
+        label = tk.Label(root, image=img_tk)
         label.pack()
         
         # Now synchronize the transition
@@ -1471,7 +1542,7 @@ def main():
                 naloga = read_and_split_file(file_name)
                 if naloga is None:
                     time.sleep(1)
-            print(naloga)
+
             # Execute tasks
             task_completed = False
             naloga_index=0
@@ -1497,14 +1568,15 @@ def main():
                         slideshow_main(task[1], task[2], task[3])
                     
                     naloga_index+=1
-                    print(naloga_index!=len(naloga))
+                    #print(naloga_index!=len(naloga))
+                    
                     # Brief loading screen between tasks unless USB removed
                     if shared_state["present"] and naloga_index!=len(naloga):
                         #prepare_window_transition()
                         show_loading_screen(0.3)
                 
                 task_completed = True
-            print("b")
+
             # Transition to screensaver
             #hide_loading_screen()
             if shared_state["present"]:
