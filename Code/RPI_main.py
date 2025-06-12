@@ -149,7 +149,7 @@ def create_image_grid(folder_path,naloga, user_input, file_number, gap=10, scale
         return final_image
     else:
         return 0
-
+'''
 def display_fullscreen_image(image, iinput):
     global root, img, shared_state
     
@@ -187,13 +187,14 @@ def display_fullscreen_image(image, iinput):
         
 
         #root.mainloop()
-
+'''
 def close_img():
     global user_input,root
     user_input=rx_and_echo() 
     #user_input = int(input("Enter a number: "))
     root.after(0, root.destroy)
 
+'''
 def besedilna_main(path_za_slike,naloga,resitev):
     folder_path = r"/media/lmk/stopnice/besedilna_slike/"+path_za_slike
     global user_input, shared_state
@@ -223,6 +224,29 @@ def besedilna_main(path_za_slike,naloga,resitev):
     
     if shared_state["present"]==True:
         display_fullscreen_image(combined_image,0)
+'''
+def besedilna_main(path_za_slike, naloga, resitev):
+    global shared_state
+    hide_loading_screen()  # Hide loading before starting
+    
+    folder_path = r"/media/lmk/stopnice/besedilna_slike/"+path_za_slike
+    if not os.path.isdir(folder_path):
+        print("Invalid folder path")
+        return
+
+    file_number = resitev
+    combined_image = create_image_grid(folder_path, naloga, "q", file_number)
+    display_fullscreen_image(combined_image, 1)
+    
+    if file_number is None:
+        print("Error: Could not load the number from the file.")
+        return
+    
+    if shared_state["present"]:
+        combined_image = create_image_grid(folder_path, naloga, user_input, file_number)
+        display_fullscreen_image(combined_image, 0)
+    
+    show_loading_screen(0.1)  # Show loading briefly when done
 #--------------BESEDILNA KONC-------------------------------------
 
 #------------------ENAČBE----------------------
@@ -322,7 +346,7 @@ def mask_numbers_before_underscore(equation_text):
                 j -= 1
         i += 1
     return "".join(masked_text)
-    
+'''    
 def enacba_main(path_za_slike,naloga,resitev):
     global shared_state
     image_folder = r"/media/lmk/stopnice/enacba_slike/"+path_za_slike
@@ -379,6 +403,54 @@ def enacba_main(path_za_slike,naloga,resitev):
         #print("Press any key to exit...")
         cv2.waitKey(cakanje_pri_prikazu_pravilnega_rezultata*1000)  # Wait for key press before closing
     cv2.destroyAllWindows()
+'''
+def enacba_main(path_za_slike, naloga, resitev):
+    global shared_state
+    prepare_window_transition()
+    
+    try:
+        image_folder = r"/media/lmk/stopnice/enacba_slike/"+path_za_slike
+        correct_answer = resitev
+        masked_text = mask_numbers_before_underscore(naloga)
+        equation_parts = list(masked_text)
+        
+        # Initial display
+        image_paths = [os.path.join(image_folder, name + ".JPG") for name in equation_parts]
+        
+        # Create OpenCV window first
+        cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        display_slike(image_paths)
+        complete_window_transition("Image Display")  # Pass window name
+    
+        # User input handling
+        index_update = 0
+        user_answer = 0
+        for cifra in correct_answer:
+            cifra_odg = 99
+            while (cifra_odg == 99):
+                cifra_odg = rx_and_echo()
+                if (cifra_odg > 9):
+                    cifra_odg = 99
+            if shared_state["present"]:
+                user_input = str(cifra_odg)
+                user_answer += pow(10, len(correct_answer)-(index_update+1))*int(user_input)
+                image_paths[underscore_index + index_update] = os.path.join(image_folder, user_input + ".JPG")
+                index_update += 1
+                display_slike(image_paths)
+        
+        # Show result
+        if shared_state["present"]:
+            if int(user_answer) == int(correct_answer):
+                image_paths.append(os.path.join(image_folder, "check.JPG"))
+            else:
+                image_paths.append(os.path.join(image_folder, "wrong.JPG"))
+            display_slike(image_paths, reserve_space=False)
+            cv2.waitKey(cakanje_pri_prikazu_pravilnega_rezultata*1000)
+    
+    finally:
+        cv2.destroyAllWindows()
+        show_loading_screen(0.1)
 #-----------------------ENAČBE KONC-------------------------------------
 
 #----------------------BARVE -------------------------------------
@@ -556,7 +628,7 @@ def complex_barvanje(colors):
     input_thread.start()
     
     root.mainloop()
-
+'''
 def barve_main(mode, attempts, colors_all):
     global shared_state
     colors = colors_all.split(',')
@@ -565,6 +637,26 @@ def barve_main(mode, attempts, colors_all):
         plot_colors(colors)
     elif mode == "complex":
         complex_barvanje(colors)
+'''
+def barve_main(mode, attempts, colors_all):
+    global shared_state
+    prepare_window_transition()
+    
+    try:
+        colors = colors_all.split(',')
+        root = tk.Tk()
+        root.attributes('-fullscreen', True)
+        
+        if mode == "simple":
+            plot_colors(colors)
+        elif mode == "complex":
+            complex_barvanje(colors)
+            
+        complete_window_transition(root)  # Pass the new window
+        root.mainloop()
+        
+    finally:
+        show_loading_screen(0.1)
 #------------------------BARVE KONC-------------------------------------
 
 #------------------------STOPMOTION------------------------------------- 
@@ -606,7 +698,7 @@ def display_images(folder, mode):
         elif user_input == current_index - 1 and current_index > 1:
             current_index = current_index - 1
 
-    cv2.destroyWindow("stopmotion")
+    #cv2.destroyWindow("stopmotion")
 #---------
 '''
 def display_image_one(image_path):
@@ -649,6 +741,8 @@ def display_image_one(image_path):
 ''' 
 
 def display_image_one(image_path):
+    global persistent_root
+
     # Read image with alpha channel if present
     img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
     if img is None:
@@ -699,18 +793,44 @@ def display_image_one(image_path):
     x_offset = (screen_width - new_width) // 2
     y_offset = (screen_height - new_height) // 2
     canvas[y_offset:y_offset+new_height, x_offset:x_offset+new_width] = resized_img
-
-    # Display in fullscreen
+    
+    # Create window
     cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    display_img=cv2.cvtColor(canvas,cv2.COLOR_RGB2BGR)
+    
+    # Display image
+    display_img = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
     cv2.imshow('stopmotion', display_img)
-    cv2.waitKey(1)  # Minimal wait time for display update
- 
+    cv2.waitKey(1)
+'''
 def stopmotion_main(folder, mode):
 	folder="/media/lmk/stopnice/stopmotion/"+folder
 	display_images(folder, mode)
-
+'''
+def stopmotion_main(folder, mode):
+    global shared_state
+    prepare_window_transition()
+    
+    try:
+        folder = "/media/lmk/stopnice/stopmotion/"+folder
+        
+        # Initialize window first
+        cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        # Display first image
+        first_image = os.path.join(folder, "1.jpg")
+        #display_image_one(first_image)
+        #hide_loading_screen_after_new_window('stopmotion')
+        hide_loading_screen()
+        display_images(folder, mode)
+        complete_window_transition('stopmotion')  # Pass window name
+        print("dd")
+    finally:
+        #cv2.destroyAllWindows()
+        show_loading_screen(0.3)
+        cv2.destroyAllWindows()
+        print("cc")
 #------------------------STOPMOTION KONC--------------------------------
 
 #------------------------SLIDESHOW--------------------------------------
@@ -816,12 +936,45 @@ def run_slideshow(folder_name, mode, display_time):
             #play_video_opencv(file_path) #ne dela
 
     cv2.destroyAllWindows()
-    
+'''    
 def slideshow_main(folder_name,mode,image_time):
 	folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
 	mode = int(mode.strip())
 	image_time = float(image_time.strip())
 	process_slideshow(folder_name.strip(), mode, image_time)
+'''
+def slideshow_main(folder_name, mode, image_time):
+    prepare_window_transition()
+    
+    try:
+        folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
+        files = sorted(os.listdir(folder_name))
+        
+        mode=int(mode.strip())
+        image_time=float(image_time.strip())
+        
+        # Initialize window
+        cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        hide_loading_screen()
+        
+        # Display first image
+        if files:
+            first_file = os.path.join(folder_name, files[0])
+            
+            if first_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                display_image(first_file, 0.1)  # Brief display to initialize
+                complete_window_transition('Slideshow')
+            elif first_file.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3]:
+                play_video(first_file)
+        
+        process_slideshow(folder_name.strip(),mode,image_time)
+        
+    finally:
+        #cv2.destroyAllWindows()
+        show_loading_screen(0.1)
+        cv2.destroyAllWindows()
 #------------------------SLIDESHOW KONC---------------------------------
 
 #------------------------BLUETOOTH FUNKCIJE:----------------------------
@@ -969,6 +1122,39 @@ def display_image_with_borders(image_path, display_time):
     cv2.imshow('Display', canvas)
     cv2.waitKey(int(display_time * 1000))
     cv2.destroyAllWindows()
+    
+def display_fullscreen_image(image, iinput):
+    global root, img, shared_state, persistent_root
+    
+    if shared_state["present"]:
+        try:
+            if root:
+                root.destroy()
+        except:
+            pass
+        
+        # Create new window but don't show it yet
+        root = tk.Tk()
+        root.attributes('-fullscreen', True)
+        root.attributes('-topmost', True)
+        img = ImageTk.PhotoImage(image)
+        label = tk.Label(root, image=img)
+        label.pack()
+        
+        # Now synchronize the transition
+        hide_loading_screen_after_new_window(root)
+        
+        if iinput == 1 and shared_state["present"]:
+            input_thread = threading.Thread(target=close_img)
+            input_thread.daemon = True
+            input_thread.start()
+            root.mainloop()
+        elif not shared_state["present"]:
+            root.after(1, root.destroy)
+            root.mainloop()
+        elif iinput == 0:
+            root.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, root.destroy)
+            root.mainloop()
 #---------------------FULLSCREEN KONC---------------------------
 
 #---------------------ZA GLEDANJE PRISOTNOSTI USB-JA------------
@@ -1127,8 +1313,134 @@ def show_screensaver():
         cv2.waitKey(1)  # Force immediate display
     return display_img is not None
 
+def create_persistent_window():
+    """Create and return a persistent fullscreen window that stays in the background"""
+    root = tk.Tk()
+    root.attributes('-fullscreen', True)
+    root.configure(bg='white')
+    root.overrideredirect(True)  # Remove window decorations
+    root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
+    root.wm_attributes("-topmost", False)  # Ensure it's not always on top
+    
+    # Create a canvas that fills the window
+    canvas = tk.Canvas(root, bg='white', highlightthickness=0)
+    canvas.pack(fill=tk.BOTH, expand=True)
+    
+    # Start with window hidden
+    root.withdraw()
+    return root, canvas
+
+
+
+# Global variables for persistent window
+persistent_root = None
+persistent_canvas = None
+
+def initialize_display():
+    """Initialize the persistent display system"""
+    global persistent_root, persistent_canvas
+    persistent_root, persistent_canvas = create_persistent_window()
+    persistent_root.update()  # Force window creation
+
+def show_white_screen():
+    """Display a plain white screen"""
+    if persistent_root and persistent_canvas:
+        persistent_root.deiconify()
+        persistent_canvas.delete("all")
+        persistent_canvas.configure(bg='white')
+        persistent_root.update()
+
+def hide_persistent_window():
+    """Hide the persistent window"""
+    if persistent_root:
+        persistent_root.withdraw()
+
+def display_image_persistent(image_path):
+    """Display an image using the persistent window"""
+    if not persistent_root or not persistent_canvas:
+        return
+    
+    try:
+        img = Image.open(image_path)
+        img.thumbnail((persistent_root.winfo_screenwidth(), persistent_root.winfo_screenheight()))
+        photo = ImageTk.PhotoImage(img)
+        
+        persistent_root.deiconify()
+        persistent_canvas.delete("all")
+        persistent_canvas.create_image(
+            persistent_root.winfo_screenwidth()//2,
+            persistent_root.winfo_screenheight()//2,
+            image=photo, anchor=tk.CENTER
+        )
+        persistent_canvas.image = photo  # Keep reference
+        persistent_root.update()
+        return True
+    except Exception as e:
+        print(f"Error displaying image: {e}")
+        return False
+
+def show_loading_screen(duration=0.5):
+    """Display a loading screen that stays until explicitly hidden"""
+    global persistent_root, persistent_canvas
+    
+    if persistent_root and persistent_canvas:
+        persistent_root.deiconify()
+        persistent_canvas.delete("all")
+        persistent_canvas.create_text(
+            persistent_root.winfo_screenwidth()//2,
+            persistent_root.winfo_screenheight()//2,
+            text="Loading...", font=("Arial", 48), fill="black"
+        )
+        persistent_root.lift()  # Bring to front
+        persistent_root.focus_force()
+        persistent_root.update()
+
+def hide_loading_screen_after_new_window(new_window):
+    """Hide loading screen only after new window is ready"""
+    global persistent_root
+    
+    if persistent_root:
+        # Wait until new window is mapped and visible
+        new_window.update()
+        new_window.update_idletasks()
+        
+        # Hide loading screen after new window is ready
+        persistent_root.withdraw()
+        new_window.lift()
+        new_window.focus_force()
+
+def hide_loading_screen():
+    """Completely hide the loading screen"""
+    global persistent_root
+    if persistent_root:
+        persistent_root.withdraw()
+
+def prepare_window_transition():
+    """Call this at start of each main function"""
+    global persistent_root
+    if persistent_root:
+        persistent_root.lift()
+        persistent_root.focus_force()
+        persistent_root.update()
+
+def complete_window_transition(new_window=None):
+    """Call this when new window is ready"""
+    global persistent_root
+    if persistent_root:
+        persistent_root.withdraw()
+    if new_window:
+        if isinstance(new_window, tk.Tk):
+            new_window.lift()
+            new_window.focus_force()
+        elif 'cv2' in str(type(new_window)):  # For OpenCV windows
+            cv2.setWindowProperty(new_window, cv2.WND_PROP_TOPMOST, 1)
+ 
 def main():
-    global shared_state
+    global shared_state, persistent_root, persistent_canvas
+    
+    # Initialize display system
+    initialize_display()
+    
     with Manager() as manager:
         shared_state = manager.dict()
         shared_state["present"] = True
@@ -1139,77 +1451,83 @@ def main():
         bluetooth_setup()
         file_name = "izvedba.txt"
         
-        # Initialize with screensaver
-        screensaver_active = show_screensaver()
-        
-        def wait_for_restart():
-            """Wait for five '3' inputs to restart"""
-            reset_count = 0
-            while True:
-                key = rx_and_echo()
-                if key == 3:
-                    reset_count += 1
-                    if reset_count >= 5:
-                        return True  # Restart requested
-                else:
-                    reset_count = 0
-                time.sleep(0.1)
-
         while True:
-            # Wait for USB if not present
-            while not shared_state["present"]:
-                if not screensaver_active:
-                    screensaver_active = show_screensaver()
-                time.sleep(0.5)
+
+            # Initial loading screen
+            show_loading_screen(1.0)
+            #show_white_screen()
             
-            # Load tasks if USB is present
+            # Wait for USB
+            while not shared_state["present"]:
+                hide_loading_screen()
+                show_screensaver()
+                while not shared_state["present"]:
+                    time.sleep(0.5)
+            
+            # Load tasks
+            #show_loading_screen(1.0)
             naloga = None
             while naloga is None and shared_state["present"]:
                 naloga = read_and_split_file(file_name)
                 if naloga is None:
                     time.sleep(1)
-            
-            # Close screensaver when starting tasks
-            if screensaver_active:
-                cv2.destroyWindow('screensaver')
-                screensaver_active = False
-            
-            # Main task execution loop
+            print(naloga)
+            # Execute tasks
             task_completed = False
+            naloga_index=0
             while shared_state["present"] and not task_completed:
-                for i in range(len(naloga)):
+                for task in naloga:
                     if not shared_state["present"]:
                         break
                         
-                    print("Executing:", naloga[i][0])
-                    if naloga[i][0] == "besedilna":
-                        besedilna_main(naloga[i][1], naloga[i][2], naloga[i][3])
-                    elif naloga[i][0] == "enacba":
-                        enacba_main(naloga[i][1], naloga[i][2], naloga[i][3])
-                    elif naloga[i][0] == "barve":
-                        barve_main(naloga[i][1], naloga[i][2], naloga[i][3])
-                    elif naloga[i][0] == "stopmotion":
-                        stopmotion_main(naloga[i][1], naloga[i][2])
-                    elif naloga[i][0] == "slideshow":
-                        slideshow_main(naloga[i][1], naloga[i][2], naloga[i][3])
+                    # Show loading between tasks
+                    #show_loading_screen(0.3)
+                    #hide_loading_screen()
+                    print(task[0])
+                    # Execute task (loading screen will be hidden by the task)
+                    if task[0] == "besedilna":
+                        besedilna_main(task[1], task[2], task[3])
+                    elif task[0] == "enacba":
+                        enacba_main(task[1], task[2], task[3])
+                    elif task[0] == "barve":
+                        barve_main(task[1], task[2], task[3])
+                    elif task[0] == "stopmotion":
+                        stopmotion_main(task[1], task[2])
+                    elif task[0] == "slideshow":
+                        slideshow_main(task[1], task[2], task[3])
                     
-                    if not shared_state["present"]:
-                        break
-                    
-                    time.sleep(cakanje_med_nalogami)
+                    naloga_index+=1
+                    print(naloga_index!=len(naloga))
+                    # Brief loading screen between tasks unless USB removed
+                    if shared_state["present"] and naloga_index!=len(naloga):
+                        #prepare_window_transition()
+                        show_loading_screen(0.3)
                 
                 task_completed = True
-            
-            # After completing tasks or USB removal
+            print("b")
+            # Transition to screensaver
+            #hide_loading_screen()
             if shared_state["present"]:
-                screensaver_active = show_screensaver()
-                if wait_for_restart():
-                    continue  # Restart the cycle
+                #if not display_image_persistent("/home/lmk/Desktop/UL_PEF_logo.png"):
+                #    show_white_screen()
+                show_screensaver()
+                hide_loading_screen()
+                # Wait for restart
+                reset_count = 0
+                start_time = time.time()
+                while time.time() - start_time < 30:  # 30s timeout
+                    key = rx_and_echo()
+                    if key == 3:
+                        reset_count += 1
+                        if reset_count >= 5:
+                            break
+                    else:
+                        reset_count = 0
+                    time.sleep(0.1)
             else:
-                screensaver_active = show_screensaver()
+                show_screensaver()
 
-        monitor.terminate()    
-
+        monitor.terminate()
 
 if __name__=="__main__":
     main()
