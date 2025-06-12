@@ -47,3 +47,7 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 07.06.2025 -> barve zrihtane, stopmotion scale zrihtan, ko se 
 		program konca se displaya screensaver 
 		(dokler ni "3" petkrat pritisnjen) 
+
+08.06.2025 -> dodal lepše prehode
+		nujno to do: zrihtaj barve (se ne zgodi več akcij, le ena)
+				besedilna (ne dela)
