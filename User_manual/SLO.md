@@ -27,6 +27,9 @@ Možni vizualni učinki oz. aplikacije so:
   - Korak na primerno stopnico predstavlja vnos rešitve. Pri tem lahko uporabimo le prvih deset stopnic (za vnos številk 0-9).
   - V primeru, da želimo vnesti večmestno številko, to storimo tako, da stopimo na stopnico za vnos vsake števke od leve proti desni.
 - Povezovanje slik in besed
+  - Korak na primerno stopnico (1 do x) predstavlja vnos rešitve
+  - Slike morajo biti poimenovane s številko
+  - Beseda mora biti v obliki sliki in poimenovana enako kot v ukazu
 - Stopmotion
 - Slideshow
 
@@ -37,17 +40,28 @@ Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze 
 - Enostavno mešanje barv: `barve:simple;število_možnih_vnosov!barva_hex_1,barva_hex_2`
   - Do vsake izmed napisanih HEX barv lahko dostopamo z eno stopnico.
   - primer: `barve:simple;3!#eb4034,#eb4034,#495446,#aba295,#8a6a91`
+**slika primera**
 - Kompleksno mešanje barv: `barve:complex;število_možnih_vnosov!barva_hex_1,barva_hex_2`
   - Do vsake izmed napisanih HEX barv lahko dostopamo z eno stopnico.
   - primer: `barve:complex;3!#eb4034,#eb4034,#495446,#aba295,#8a6a91`
-- Enačba:
-  - primer: enacba:naloga1;1+49__=50$49
-- Povezovanje slik in besed:
-  - primer: besedilna:naloga1;papagaj$3
-- Stopmotion:
-  - primer: stopmotion:prva_animacija;1
-- Slideshow:
-  - slideshow:ponedeljek;3$3
+**slika primera**
+- Enačba: `enacba:ime_mape_s_slikami_stevilk;x+y_=z$resitev`
+  - pri računu nam `_` skrije rešitev, vendar mora biti toliko znakov kot števk v rešitvi.
+  - skrijemo lahko katerikoli del enačbe
+  - na koncu moramo zapisati rešitev po `$`
+  - primer: `enacba:naloga1;1+49__=50$49`
+**slika primera**
+- Povezovanje slik in besed: `besedilna:ime_mape_s_slikami;ime_slike_z_napisom$stevilka_slike_ki_je_pravilna`
+  - primer: `besedilna:naloga1;papagaj$3`
+**slika primera**
+- Stopmotion: `stopmotion:ime_mape_z_vsebino;neki?`
+  - primer: `stopmotion:prva_animacija;1`
+- Slideshow: `slideshow:ime_mape_z_vsebino;koliko_casa_naj_prikazuje_sliko$nacin_predvajanja`
+  - nacini predvajanja:
+    - 1 = predvajaj samo slike
+    - 2 = predvajaj samo videoposnetke
+    - 3 = predvajaj slike in videoposnetke
+  - primer `slideshow:ponedeljek;3$3`
 
 ## Preikus ukazov za vizualne učinke
 
@@ -61,5 +75,26 @@ Opozorila:
     * enkrat z desnim klikom kliknete na USB ključek
     * v oknu izberete "Preimenuj"
     * preminujete v "stopnice". Vse z majhnimi črkami!
+
+### Gradivo za naloge
+Na USB ključku morate imeti vedno mape:
+- besedilna
+- enacba
+- stopmomtion
+- slideshow
+
+in datoteko "izvedba.txt".
+To je ključno, saj ukaz za nalogo bo iskal v točno imenovani mapi gradivo. Znotraj mape za posamezno vrsto naloge morate ustvariti svoje mape s poljubnim imenom, v katere lahko shranjujete slike (ali videje), ki so poimenovane primerno za ukaze.
+
+**slika ureditve USB ključka tukaj**
+
+# Delovanje naprave
+Naprava je sestavljena iz dveh delov:
+- prvi spremlja korakanje po stopnicah in predvaja zvok
+- drugi prejema podatke o korakanju po stopnicah in prikazuje vizualne učinke
+
+Oba dela naprave se ob vklopu naprave povežeta. Za vklop zvoka je potrebno stikalo za zvok premakniti na noto. Za vklop prikaza je potrebno stikalo za prikaz premakniti na projekcijo.
+
+Ob vklopu drugi del naprave prebere vsebino USB ključka in samodejno začne z izvajanjem nalog. V primeru, da USB ključek ob vklopu ni vstavljen
 
 Prekinitev delovanja aplikacije brez konca (kompleksno mešanje barv, stopmotion, slideshow) dosežemo tako, da petkrat stopmino na zadnjo (25.) stopnico. Program ponovno zaženemo tako, da petkrat stopimo na tretjo (3.) stopnico. 
