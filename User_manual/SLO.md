@@ -2,7 +2,7 @@
 Datoteke za zvočne učinke se bodo predvajale, ko stopimo na stopnico. V primeru, da se trenutna skladba še ni končala, in stopimo na naslednjo stopnico, potem bo trenutna skladba prekinjena in nova se bo predjvala.
 Za prenos datotek za zvočne učinke na napravo uporabimo SD kartico.
 
-## SD kartica
+### SD kartica
 Opozorila:
 - Na SD kartici naj bo največ 25 skladb (ker je 25 stopnic vse skupaj).
   - SD kartico je potrebno v primeru nakupa nova SD kartice ponastaviti s pomočjo "SD Card Formatter".
@@ -38,7 +38,7 @@ Možni vizualni učinki oz. aplikacije so:
 
 Opozorilo: Za izbiro barve uporabite Color Picker na Googlu: https://g.co/kgs/LrNHnkX . S pomočjo okna in drsnika izberite barvo in prekopirajte napis zapisan pod "HEX" (npr. #fcba03).
 
-## Ukazi za vizualne učinke
+### Ukazi za vizualne učinke
 Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze v obliki, ki je primerna za aplikacijo:
 - Enostavno mešanje barv: `barve:simple;število_možnih_vnosov!barva_hex_1,barva_hex_2`
   - Do vsake izmed napisanih HEX barv lahko dostopamo z eno stopnico.
@@ -66,9 +66,9 @@ Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze 
     - 3 = predvajaj slike in videoposnetke
   - primer `slideshow:ponedeljek;3$3`
 
-## Preikus ukazov za vizualne učinke
+### Preizkus ukazov za vizualne učinke
 
-## USB ključek
+### USB ključek
 Opozorila:
 - USB ključek mora biti imenovan "stopnice"
   - USB ključek lahko preimenujete tako, da:
@@ -79,7 +79,7 @@ Opozorila:
     * v oknu izberete "Preimenuj"
     * preminujete v "stopnice". Vse z majhnimi črkami!
 
-### Gradivo za naloge
+#### Gradivo za naloge
 Na USB ključku morate imeti vedno mape:
 - besedilna
 - enacba
