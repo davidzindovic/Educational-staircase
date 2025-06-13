@@ -1,8 +1,6 @@
-Za nalaganje datotek na platformo uporabimo SD kartico za glasbo in USB ključek za video/slikovne vsebine.
-***
-
 # Zvočni učinki
 Datoteke za zvočne učinke se bodo predvajale, ko stopimo na stopnico. V primeru, da se trenutna skladba še ni končala, in stopimo na naslednjo stopnico, potem bo trenutna skladba prekinjena in nova se bo predjvala.
+Za prenos datotek za zvočne učinke na napravo uporabimo SD kartico.
 
 ## SD kartica
 Opozorila:
@@ -31,9 +29,14 @@ Možni vizualni učinki oz. aplikacije so:
   - Slike morajo biti poimenovane s številko
   - Beseda mora biti v obliki sliki in poimenovana enako kot v ukazu
 - Stopmotion
+  - Začnemo s prvo sliko
+  - Premik na naslednjo sliko dosežemo s korakom na naslednjo stopnico
+  - Sliko lahko premaknemo nazaj s korakom na prješnjo stopnico
 - Slideshow
+  - Samodejno predvajanje videoposnetkov in/ali slik
+  - Nastavljiv način
 
-Opozorilo: Za izbiro barve uporabite: https://g.co/kgs/LrNHnkX . S pomočjo okna in drsnika izberite barvo in prekopirajte napis zapisan pod "HEX" (npr. #fcba03).
+Opozorilo: Za izbiro barve uporabite Color Picker na Googlu: https://g.co/kgs/LrNHnkX . S pomočjo okna in drsnika izberite barvo in prekopirajte napis zapisan pod "HEX" (npr. #fcba03).
 
 ## Ukazi za vizualne učinke
 Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze v obliki, ki je primerna za aplikacijo:
@@ -49,7 +52,7 @@ Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze 
   - pri računu nam `_` skrije rešitev, vendar mora biti toliko znakov kot števk v rešitvi.
   - skrijemo lahko katerikoli del enačbe
   - na koncu moramo zapisati rešitev po `$`
-  - primer: `enacba:naloga1;1+49__=50$49`
+  - primer: `enacba:naloga1;1+__=50$49`
 **slika primera**
 - Povezovanje slik in besed: `besedilna:ime_mape_s_slikami;ime_slike_z_napisom$stevilka_slike_ki_je_pravilna`
   - primer: `besedilna:naloga1;papagaj$3`
@@ -97,4 +100,4 @@ Oba dela naprave se ob vklopu naprave povežeta. Za vklop zvoka je potrebno stik
 
 Ob vklopu drugi del naprave prebere vsebino USB ključka in samodejno začne z izvajanjem nalog. V primeru, da USB ključek ob vklopu ni vstavljen
 
-Prekinitev delovanja aplikacije brez konca (kompleksno mešanje barv, stopmotion, slideshow) dosežemo tako, da petkrat stopmino na zadnjo (25.) stopnico. Program ponovno zaženemo tako, da petkrat stopimo na tretjo (3.) stopnico. 
+Prekinitev delovanja aplikacije brez konca (kompleksno mešanje barv, stopmotion, slideshow) dosežemo tako, da petkrat zapored stopimo na zadnjo (25.) stopnico. Program ponovno zaženemo tako, da petkrat stopimo na tretjo (3.) stopnico. 
