@@ -1,3 +1,4 @@
+
 # Zvočni učinki
 Datoteke za zvočne učinke se bodo predvajale, ko stopimo na stopnico. V primeru, da se trenutna skladba še ni končala, in stopimo na naslednjo stopnico, potem bo trenutna skladba prekinjena in nova se bo predjvala.
 Za prenos datotek za zvočne učinke na napravo uporabimo SD kartico.
@@ -14,6 +15,7 @@ Opozorila:
     * Če vidite kje napisano ".mp3", potem je datoteka pripravljena
   - V primeru, da vaša datoteka ni v formatu MP3, lahko vašo datoteko pretvorite v MP3 s pomočjo https://online-audio-converter.com/
 ***
+
 # Vizualni učinki
 Datoteke za vizualne učinke se bodo predvajale glede na vaša navodila na USB ključku.
 Možni vizualni učinki oz. aplikacije so:
