@@ -27,6 +27,8 @@ os.environ["QT_QPA_PLATFORM"]="xcb"
 
 img=None
 root=None
+_current_label=None
+_tk_image_anchor=None
 
 #cakanje podaj v sekundah:
 cakanje_med_nalogami=3
@@ -238,7 +240,9 @@ def besedilna_main(path_za_slike, naloga, resitev):
 
     file_number = resitev
     combined_image = create_image_grid(folder_path, naloga, "q", file_number)
-    display_fullscreen_image(combined_image, 1)
+    if combined_image:
+        #display_fullscreen_image_besedilna(combined_image,1)
+        display_fullscreen_image(combined_image, 1)
     
     if file_number is None:
         print("Error: Could not load the number from the file.")
@@ -471,6 +475,7 @@ def enacba_main(path_za_slike, naloga, resitev):
 #-----------------------ENAČBE KONC-------------------------------------
 
 #----------------------BARVE -------------------------------------
+max_colors_to_blend=0
 # A function to blend two hex colors and return the mixed color in hex
 def blend_colors(color1, color2):
     # Convert hex to RGB
@@ -500,7 +505,7 @@ def create_color_legend(canvas, colors, x_start, y_start, box_size=50, text_offs
             text=f"{i+1}: {color}", anchor="w", font=("Arial", 16)
         )
 
-def plot_colors(colors):
+def plot_colors(colors,stevilo_barv):
     """Display color selection interface that stays open"""
     root = tk.Tk()
     # Proper fullscreen without window decorations
@@ -520,9 +525,10 @@ def plot_colors(colors):
     result_box = None
     result_text = None
     reset_count = 0  # Initialize reset counter
+    max_barv=stevilo_barv
     
     def update_display():
-        nonlocal selected_indices, color_boxes, result_box, result_text, reset_count
+        nonlocal selected_indices, color_boxes, result_box, result_text#, reset_count
         
         # Clear previous displays
         for box in color_boxes:
@@ -568,25 +574,34 @@ def plot_colors(colors):
         
     
     def input_handler():
-        nonlocal selected_indices, reset_count
-        
+        nonlocal selected_indices, max_barv
+        #global max_colors_to_blend
+
+        reset_count=0
         while True:
             selected_index = rx_and_echo()
             
             if selected_index == 25:
                 reset_count += 1
                 if reset_count >= 5:
-                    root.after(0, root.destroy)
+                    root.after(0, root.quit)
+                    #root.destroy()
                     break
                 continue
             else:
                 reset_count = 0
             
-            if 1 <= selected_index <= len(colors):
+            #d1=selected_indices.copy()
+            #ld1=len(d1)
+            #d2=max_barv
+            #print(ld1!=d2)
+            #if len(selected_indices)<max_barv:
+            print(f"ssss: {len(selected_indices)} vs {max_barv} | {int(len(selected_indices))!=int(max_barv)}")
+            if (1 <= selected_index <= len(colors)) and (int(len(selected_indices))!=int(max_barv)):
+                print("append")
                 selected_indices.append(selected_index)
                 root.after(0, update_display)
-        print("??")
-    
+
     hide_loading_screen()
     
     # Start with empty display
@@ -596,9 +611,9 @@ def plot_colors(colors):
     input_thread = threading.Thread(target=input_handler)
     input_thread.daemon = True
     input_thread.start()
-    
+
     root.mainloop()
-    print("neki")
+    root.destroy()
 
 def complex_barvanje(colors):
     """Interactive color mixing with persistent window"""
@@ -663,15 +678,17 @@ def barve_main(mode, attempts, colors_all):
 def barve_main(mode, attempts, colors_all):
     global shared_state
     prepare_window_transition()
-    
+    #max_colors_to_blend=attempts
+    #print("attemps: " +str(attempts))
+    #print("max: "+str(max_colors_to_blend))
     try:
         colors = colors_all.split(',')
         #root = tk.Tk()
         #root.attributes('-fullscreen', True)
         
         if mode == "simple":
-            plot_colors(colors)
-            print("bb")
+            plot_colors(colors,attempts)
+
         elif mode == "complex":
             complex_barvanje(colors)
             
@@ -679,7 +696,7 @@ def barve_main(mode, attempts, colors_all):
         #root.mainloop()
         
     finally:
-        print("aa")
+        print("finaly :)")
         #show_loading_screen(0.1)
     print("!!!")
 #------------------------BARVE KONC-------------------------------------
@@ -1182,8 +1199,11 @@ def display_fullscreen_image(image, iinput):
             root.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, root.destroy)
             root.mainloop()
 '''
-def display_fullscreen_image(image, iinput):
-    global root, img_tk, shared_state, persistent_root
+
+global_images=[]
+
+def display_fullscreen_image(iimage, iinput):
+    global root, img_tk, shared_state, _tk_image_anchor#_current_label
     
     if 'root' in globals() and isinstance(root,tk.Tk):
         try:
@@ -1194,23 +1214,48 @@ def display_fullscreen_image(image, iinput):
             root.destroy()
         except Exception as e:
             root=None
-            
-    root=tk.Tk()
-    if shared_state["present"]:
-        #try:
-        #    if root:
-        #        root.destroy()
-        #except:
-        #    pass
-        
-        # Create new window but don't show it yet
-        #root = tk.Tk()
-        
+    
+    if not root:
+        root=tk.Tk()
         root.attributes('-fullscreen', True)
-        root.attributes('-topmost', True)
-        img_tk = ImageTk.PhotoImage(image)
-        label = tk.Label(root, image=img_tk)
+        label=tk.Label(root)
         label.pack()
+        _tk_image_anchor=label
+    else:
+        label=_tk_image_anchor
+    img_tk=ImageTk.PhotoImage(iimage.convert('RGB'))
+    label.config(image=img_tk)
+    label.__photo=img_tk
+    
+    root.update_idletasks()
+    root.lift()
+    
+    '''        
+    #if 'root' not in globals() :
+    root=tk.Tk()
+    root.attributes('-fullscreen',True)
+    root.attributes('-topmost', True)
+    _current_label=tk.Label(root)
+    _current_label.pack(fill=tk.BOTH,expand=True)
+    #elif _current_label is not None:
+    #    _current_label.config(image='')
+    #    root.update()
+    '''
+    
+            
+    #root=tk.Tk()
+    if shared_state["present"]:
+
+        '''
+        img_tk=ImageTk.PhotoImage(iimage.convert('RGB'))
+        _current_label.config(image=img_tk)
+        _current_label.image=img_tk
+
+        root.update_idletasks()
+        root.deiconify()
+        #root.update()
+        '''
+        
         
         # Now synchronize the transition
         hide_loading_screen_after_new_window(root)
