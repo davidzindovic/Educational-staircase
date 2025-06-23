@@ -51,3 +51,5 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 08.06.2025 -> dodal lepše prehode
 		nujno to do: zrihtaj barve (se ne zgodi več akcij, le ena)
 				besedilna (ne dela)
+09.06.2025-> popravljene barve
+		potrebno popraviti besedilno do konca (deepseek)
