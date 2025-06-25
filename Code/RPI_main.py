@@ -25,10 +25,17 @@ MAX_HEIGHT = 1080
 os.environ["DIPLAY"]=":0"
 os.environ["QT_QPA_PLATFORM"]="xcb"
 
+'''
 img=None
 root=None
 _current_label=None
 _tk_image_anchor=None
+'''
+
+# Add these with your other global variables
+_image_window = None
+_image_label = None
+_image_keeper = None  # The secret weapon
 
 #cakanje podaj v sekundah:
 cakanje_med_nalogami=3
@@ -193,10 +200,10 @@ def display_fullscreen_image_besedilna(image, iinput):
         #root.mainloop()
 
 def close_img():
-    global user_input,root
-    user_input=rx_and_echo() 
-    #user_input = int(input("Enter a number: "))
-    root.after(0, root.destroy)
+    global user_input, _image_window
+    user_input = rx_and_echo() 
+    if _image_window:
+        _image_window.after(0, _image_window.quit)
 
 '''
 def besedilna_main(path_za_slike,naloga,resitev):
@@ -248,7 +255,8 @@ def besedilna_main(path_za_slike, naloga, resitev):
         print("Error: Could not load the number from the file.")
         return
     
-    user_input=rx_and_echo()
+    #ne rabis ker je ze v close image
+    #user_input=rx_and_echo()
     
     if shared_state["present"]:
         combined_image = create_image_grid(folder_path, naloga, user_input, file_number)
@@ -560,7 +568,7 @@ def plot_colors(colors,stevilo_barv):
                 color_boxes.extend([rect, text])
         
         # Display blended color if we have at least 2 colors
-        if len(selected_indices) >= 2:
+        if len(selected_indices) >= int(max_barv):
             blended = blend_colors(colors[selected_indices[0]-1], colors[selected_indices[1]-1])
             result_box = canvas.create_rectangle(
                 start_x + len(selected_indices)*spacing, start_y,
@@ -647,7 +655,7 @@ def complex_barvanje(colors):
             if selected_index == 25:
                 reset_count += 1
                 if reset_count >= 5:
-                    root.after(0, root.destroy)
+                    root.after(0, root.quit)
                     break
                 current_color = "#ffffff"
                 canvas.itemconfig(color_display, fill=current_color)
@@ -665,6 +673,7 @@ def complex_barvanje(colors):
     input_thread.start()
     
     root.mainloop()
+    root.destroy()
 '''
 def barve_main(mode, attempts, colors_all):
     global shared_state
@@ -880,141 +889,127 @@ def process_slideshow(folder_name, mode, image_time):
     print(f"Processing slideshow in folder: {folder_name}, mode: {mode}, image time: {image_time}")
     run_slideshow(folder_name, mode, image_time)
 
-def display_image(image_path, display_time):
-    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Read with alpha channel if present
+def display_image(image_path, display_time, stop_event):
+    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
     if img is None:
         print(f"Error loading image: {image_path}")
-        return
+        return False
 
-    if len(img.shape) == 3 and img.shape[2] == 4:  # If image has transparency (RGBA)
-        # Separate the alpha channel
+    if len(img.shape) == 3 and img.shape[2] == 4:
         alpha_channel = img[:, :, 3] / 255.0
-        img = img[:, :, :3]  # Remove the alpha channel
-
-        # Create a white background
-        white_background = np.ones_like(img, dtype=np.uint8) * 255  # White background
+        img = img[:, :, :3]
+        white_background = np.ones_like(img, dtype=np.uint8) * 255
         img = (img * alpha_channel[:, :, None] + white_background * (1 - alpha_channel[:, :, None])).astype(np.uint8)
 
     img_h, img_w = img.shape[:2]
 
-    # Scale down if too large
     if img_w > MAX_WIDTH or img_h > MAX_HEIGHT:
         scale = min(MAX_WIDTH / img_w, MAX_HEIGHT / img_h)
         img_w = int(img_w * scale)
         img_h = int(img_h * scale)
         img = cv2.resize(img, (img_w, img_h), interpolation=cv2.INTER_AREA)
 
-    # Create a white background
     canvas = np.ones((MAX_HEIGHT, MAX_WIDTH, 3), dtype=np.uint8) * 255
-
-    # Center the image
     x_offset = (MAX_WIDTH - img_w) // 2
     y_offset = (MAX_HEIGHT - img_h) // 2
     canvas[y_offset:y_offset+img_h, x_offset:x_offset+img_w] = img
 
     cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
     cv2.imshow('Slideshow', canvas)
-    cv2.waitKey(int(display_time * 1000))
+    
+    # Display image until timeout or stop event is set
+    start_time = time.time()
+    while (time.time() - start_time) < display_time and not stop_event.is_set():
+        if cv2.waitKey(100) != -1:  # Check for any key press every 100ms
+            return True
+    return stop_event.is_set()
 
-def play_video(video_path):
-    # Create VLC instance
+def play_video(video_path, stop_event):
     instance = vlc.Instance('--no-xlib --fullscreen --quiet')
-    
-    # Create media player
     player = instance.media_player_new()
-    
-    # Load media
     media = instance.media_new(video_path)
     player.set_media(media)
-    
-    # Set fullscreen
     player.set_fullscreen(True)
-    
-    # Play the video
     player.play()
     
-    # Wait for video to start playing
+    # Wait for video to start
     time.sleep(0.5)
     
-    # Wait while video is playing
-    while player.is_playing():
-        time.sleep(0.01)
+    # Check stop event while playing
+    while player.is_playing() and not stop_event.is_set():
+        time.sleep(0.1)
     
-    # Stop when done
-    #player.stop()
+    player.stop()
     player.release()
     instance.release()
+    return stop_event.is_set()
 
-def play_video_opencv(video_path):
-    cap=cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-	#print(f"Error Opening video: {video_path}")
-        return
-
-    cv2.namedWindow("Video", cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty("Video",cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-    while cap.isOpened():
-        ret, frame=cap.read()
-        if not ret:
-            break
-        cv2.imshow("video",frame)
-
-    cap.release()
-    cv2.waitKey(0)
+def input_monitor(stop_event):
+    reset_count = 0
+    while not stop_event.is_set():
+        user_input = rx_and_echo()
+        if user_input == 25:
+            reset_count += 1
+            if reset_count >= 5:
+                stop_event.set()
+                break
+        else:
+            reset_count = 0
 
 def run_slideshow(folder_name, mode, display_time):
     files = sorted(os.listdir(folder_name))
-
-    for filename in files:
-        file_path = os.path.join(folder_name, filename)
-
-        if file_path.lower().endswith(('.png', '.jpg', '.jpeg')) and mode in [1, 3]:
-            display_image(file_path, display_time)
-        elif file_path.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3]:
-            play_video(file_path)
-            #play_video_opencv(file_path) #ne dela
-
-    cv2.destroyAllWindows()
-'''    
-def slideshow_main(folder_name,mode,image_time):
-	folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
-	mode = int(mode.strip())
-	image_time = float(image_time.strip())
-	process_slideshow(folder_name.strip(), mode, image_time)
-'''
-def slideshow_main(folder_name, mode, image_time):
-    prepare_window_transition()
+    if not files:
+        return
+    
+    repeat = mode > 3  # Continuous mode for modes 4-6
+    stop_event = threading.Event()
+    
+    # Start input monitoring thread
+    input_thread = threading.Thread(target=input_monitor, args=(stop_event,))
+    input_thread.daemon = True
+    input_thread.start()
     
     try:
+        while repeat and not stop_event.is_set() and shared_state["present"]:
+            for filename in files:
+                if stop_event.is_set() or not shared_state["present"]:
+                    break
+                    
+                file_path = os.path.join(folder_name, filename)
+                
+                # Play media based on type and mode
+                should_stop = False
+                if file_path.lower().endswith(('.png', '.jpg', '.jpeg')) and mode in [1, 3, 4, 6]:
+                    should_stop = display_image(file_path, display_time, stop_event)
+                elif file_path.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3, 5, 6]:
+                    should_stop = play_video(file_path, stop_event)
+                
+                if should_stop:
+                    break
+            
+            # For non-continuous modes, only run once
+            if mode <= 3:
+                break
+        hide_loading_screen()
+    finally:
+        stop_event.set()
+        input_thread.join(timeout=0.1)  # Give thread a moment to exit
+
+def slideshow_main(folder_name, mode, image_time):
+    prepare_window_transition()
+    try:
         folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
-        files = sorted(os.listdir(folder_name))
-        
-        mode=int(mode.strip())
-        image_time=float(image_time.strip())
+        mode = int(mode.strip())
+        image_time = float(image_time.strip())
         
         # Initialize window
         cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         
         hide_loading_screen()
-        '''
-        # Display first image
-        if files:
-            first_file = os.path.join(folder_name, files[0])
-            
-            if first_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                display_image(first_file, 0.1)  # Brief display to initialize
-                complete_window_transition('Slideshow')
-            elif first_file.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3]:
-                play_video(first_file)
-        '''
-        process_slideshow(folder_name.strip(),mode,image_time)
-        
+        process_slideshow(folder_name.strip(), mode, image_time)
     finally:
-        #cv2.destroyAllWindows()
         show_loading_screen(0.1)
         cv2.destroyAllWindows()
 #------------------------SLIDESHOW KONC---------------------------------
@@ -1202,75 +1197,89 @@ def display_fullscreen_image(image, iinput):
 
 global_images=[]
 
-def display_fullscreen_image(iimage, iinput):
-    global root, img_tk, shared_state, _tk_image_anchor#_current_label
+def display_fullscreen_image(image, iinput):
+    global _image_window, _image_label, _image_keeper, shared_state
     
-    if 'root' in globals() and isinstance(root,tk.Tk):
-        try:
-            root.withdraw()
-            root.quit()
-            for child in root.winfo_children():
-                child.destroy()
-            root.destroy()
-        except Exception as e:
-            root=None
+    # Convert image to RGB format upfront
+    pil_image = image.convert("RGB")
     
-    if not root:
-        root=tk.Tk()
-        root.attributes('-fullscreen', True)
-        label=tk.Label(root)
-        label.pack()
-        _tk_image_anchor=label
-    else:
-        label=_tk_image_anchor
-    img_tk=ImageTk.PhotoImage(iimage.convert('RGB'))
-    label.config(image=img_tk)
-    label.__photo=img_tk
+    # Create window if needed
+    if _image_window is None or not _image_window.winfo_exists():
+        _image_window = tk.Toplevel()
+        
+        # Force true fullscreen
+        _image_window.overrideredirect(True)
+        _image_window.geometry("{0}x{1}+0+0".format(
+            _image_window.winfo_screenwidth(), 
+            _image_window.winfo_screenheight()))
+        _image_window.attributes('-fullscreen', True)
+        _image_window.attributes('-topmost', True)
+        _image_window.configure(bg='white')  # Set default background to white
+        
+        _image_label = tk.Label(_image_window, bg='white')  # White background
+        _image_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)  # Add padding
     
-    root.update_idletasks()
-    root.lift()
-    
-    '''        
-    #if 'root' not in globals() :
-    root=tk.Tk()
-    root.attributes('-fullscreen',True)
-    root.attributes('-topmost', True)
-    _current_label=tk.Label(root)
-    _current_label.pack(fill=tk.BOTH,expand=True)
-    #elif _current_label is not None:
-    #    _current_label.config(image='')
-    #    root.update()
+    '''
+    #adapt colors background:
+    # Add this before creating img_tk
+    from PIL import ImageStat
+    def get_dominant_color(pil_img):
+        img = pil_img.copy()
+        img = img.convert("RGB")
+        img = img.resize((1, 1), Image.LANCZOS)
+        return img.getpixel((0, 0))
+
+    dominant_color = '#%02x%02x%02x' % get_dominant_color(pil_image)
+    _image_window.configure(bg=dominant_color)
+    _image_label.config(bg=dominant_color)
     '''
     
-            
-    #root=tk.Tk()
+    
+    # Create and anchor the image
+    img_tk = ImageTk.PhotoImage(pil_image)
+    _image_label.config(
+        image=img_tk,
+        bg='white',  # Ensure label background is white
+        compound='center'  # Center the image in the label
+    )
+    
+    # THE CRITICAL LINE - makes reference permanent
+    _image_keeper = (_image_window, _image_label, img_tk)
+    
+    # Calculate scaling to fit screen while maintaining aspect ratio
+    screen_width = _image_window.winfo_screenwidth()
+    screen_height = _image_window.winfo_screenheight()
+    img_width, img_height = pil_image.size
+    
+    # Calculate maximum scale factor
+    scale = min(
+        (screen_width - 40) / img_width,  # Account for padding
+        (screen_height - 40) / img_height
+    )
+    
+    # Resize image if needed
+    if scale < 1:
+        new_size = (int(img_width * scale), int(img_height * scale))
+        pil_image = pil_image.resize(new_size, Image.LANCZOS)
+        img_tk = ImageTk.PhotoImage(pil_image)
+        _image_label.config(image=img_tk)
+        _image_keeper = (_image_window, _image_label, img_tk)  # Update reference
+    
+    # Force full display update
+    _image_window.update_idletasks()
+    _image_window.update()
+    
+    # Handle input and timing
     if shared_state["present"]:
-
-        '''
-        img_tk=ImageTk.PhotoImage(iimage.convert('RGB'))
-        _current_label.config(image=img_tk)
-        _current_label.image=img_tk
-
-        root.update_idletasks()
-        root.deiconify()
-        #root.update()
-        '''
-        
-        
-        # Now synchronize the transition
-        hide_loading_screen_after_new_window(root)
-        
-        if iinput == 1 and shared_state["present"]:
+        if iinput == 1:
             input_thread = threading.Thread(target=close_img)
             input_thread.daemon = True
             input_thread.start()
-            root.mainloop()
-        elif not shared_state["present"]:
-            root.after(1, root.destroy)
-            root.mainloop()
+            _image_window.mainloop()
         elif iinput == 0:
-            root.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, root.destroy)
-            root.mainloop()
+            _image_window.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, _image_window.quit)
+            _image_window.mainloop()
+            _image_window.destroy()
 #---------------------FULLSCREEN KONC---------------------------
 
 #---------------------ZA GLEDANJE PRISOTNOSTI USB-JA------------
