@@ -63,9 +63,12 @@ Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze 
   - primer: `stopmotion:prva_animacija;1`
 - Slideshow: `slideshow:ime_mape_z_vsebino;koliko_casa_naj_prikazuje_sliko$nacin_predvajanja`
   - nacini predvajanja:
-    - 1 = predvajaj samo slike
-    - 2 = predvajaj samo videoposnetke
-    - 3 = predvajaj slike in videoposnetke
+    - 1 = le enkrat predvajaj samo slike
+    - 2 = le enkrat predvajaj samo videoposnetke
+    - 3 = le enkrat predvajaj slike in videoposnetke
+    - 4 = ponavljaj predvajanje samo slik
+    - 5 = ponavljaj predvajanje samo videposnetkov
+    - 6 = ponavljaj predvajanje slik in videoposnetkov
   - primer `slideshow:ponedeljek;3$3`
 
 ### Preizkus ukazov za vizualne učinke
