@@ -44,12 +44,16 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 	seemless transitioni?
 	user manual, sim env za PC
 
-07.06.2025 -> barve zrihtane, stopmotion scale zrihtan, ko se 
+11.06.2025 -> barve zrihtane, stopmotion scale zrihtan, ko se 
 		program konca se displaya screensaver 
 		(dokler ni "3" petkrat pritisnjen) 
 
-08.06.2025 -> dodal lepše prehode
+12.06.2025 -> dodal lepše prehode
 		nujno to do: zrihtaj barve (se ne zgodi več akcij, le ena)
 				besedilna (ne dela)
-09.06.2025-> popravljene barve
+23.06.2025 -> popravljene barve
 		potrebno popraviti besedilno do konca (deepseek)
+
+24.06.2025 -> naštudiral scp transfer med win pc in rpi
+
+25.06.2025 -> 
