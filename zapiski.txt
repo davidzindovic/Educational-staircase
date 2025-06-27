@@ -59,3 +59,5 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 25.06.2025 -> zrihtana besedilna
 		dodan continous mode za slideshow
 		NUJNO popravi break za continous mode ("25"x5) ker se zatakne v  "Loading..."
+
+27.06.2025 -> ni še zrihtan continous mode, še vedno se zatakne na exitu (segmentation fault)
