@@ -962,6 +962,7 @@ def run_slideshow(folder_name, mode, display_time):
     if not files:
         return
     
+    # Define repeat here before using it
     repeat = mode > 3  # Continuous mode for modes 4-6
     stop_event = threading.Event()
     
@@ -978,7 +979,6 @@ def run_slideshow(folder_name, mode, display_time):
                     
                 file_path = os.path.join(folder_name, filename)
                 
-                # Play media based on type and mode
                 should_stop = False
                 if file_path.lower().endswith(('.png', '.jpg', '.jpeg')) and mode in [1, 3, 4, 6]:
                     should_stop = display_image(file_path, display_time, stop_event)
@@ -989,12 +989,37 @@ def run_slideshow(folder_name, mode, display_time):
                     break
             
             # For non-continuous modes, only run once
-            if mode <= 3:
+            if not repeat:
                 break
-        hide_loading_screen()
+                
+    except Exception as e:
+        print(f"Slideshow error: {e}")
     finally:
+        # Ensure all resources are cleaned up
         stop_event.set()
-        input_thread.join(timeout=0.1)  # Give thread a moment to exit
+        cv2.destroyAllWindows()
+        if input_thread.is_alive():
+            input_thread.join(timeout=0.5)
+        time.sleep(0.1)  # Small delay to ensure cleanup completes
+
+def slideshow_main(folder_name, mode, image_time):
+    prepare_window_transition()
+    try:
+        folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
+        mode = int(mode.strip())
+        image_time = float(image_time.strip())
+        
+        # Initialize window
+        cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        hide_loading_screen()
+        run_slideshow(folder_name.strip(), mode, image_time)
+    except ValueError as e:
+        print(f"Invalid slideshow parameters: {e}")
+    finally:
+        show_loading_screen(0.1)
+        cv2.destroyAllWindows()
 
 def slideshow_main(folder_name, mode, image_time):
     prepare_window_transition()
@@ -1424,19 +1449,33 @@ def display_image_a(image_path):
     return display_img
 
 def show_screensaver():
-    """Display screensaver without window flicker"""
-    # Create window first (hidden)
-    cv2.namedWindow('screensaver', cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty('screensaver', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    
-    # Load and prepare image
-    img_path = "/home/lmk/Desktop/UL_PEF_logo.png"
-    display_img = display_image_a(img_path)
-    
-    if display_img is not None:
-        cv2.imshow('screensaver', display_img)
-        cv2.waitKey(1)  # Force immediate display
-    return display_img is not None
+    """Safe screensaver display with error handling"""
+    try:
+        # Destroy any existing OpenCV windows
+        cv2.destroyAllWindows()
+        time.sleep(0.1)
+        
+        # Create new window
+        cv2.namedWindow('screensaver', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty('screensaver', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        # Load image safely
+        img_path = "/home/lmk/Desktop/UL_PEF_logo.png"
+        if not os.path.exists(img_path):
+            print("Screensaver image not found!")
+            return False
+            
+        img = display_image_a(img_path)
+        if img is None:
+            return False
+            
+        cv2.imshow('screensaver', img)
+        cv2.waitKey(1)
+        return True
+        
+    except Exception as e:
+        print(f"Screensaver error: {e}")
+        return False
 
 def create_persistent_window():
     """Create and return a persistent fullscreen window that stays in the background"""
@@ -1539,6 +1578,7 @@ def hide_loading_screen():
     global persistent_root
     if persistent_root:
         persistent_root.withdraw()
+        persistent_root.update()  # Force the window to hide immediately
 
 def prepare_window_transition():
     """Call this at start of each main function"""
@@ -1559,6 +1599,27 @@ def complete_window_transition(new_window=None):
             new_window.focus_force()
         elif 'cv2' in str(type(new_window)):  # For OpenCV windows
             cv2.setWindowProperty(new_window, cv2.WND_PROP_TOPMOST, 1)
+
+def emergency_cleanup():
+    """Forcefully clean up resources"""
+    try:
+        cv2.destroyAllWindows()
+    except:
+        pass
+        
+    try:
+        if persistent_root:
+            persistent_root.destroy()
+    except:
+        pass
+        
+    # Kill any remaining threads
+    for thread in threading.enumerate():
+        if thread != threading.main_thread():
+            try:
+                thread._stop()
+            except:
+                pass
  
 def main():
     global shared_state, persistent_root, persistent_canvas
@@ -1604,40 +1665,63 @@ def main():
                 for task in naloga:
                     if not shared_state["present"]:
                         break
+                
+                    # Clear any existing windows
+                    cv2.destroyAllWindows()
+                    if _image_window:
+                        _image_window.destroy()
                         
                     # Show loading between tasks
-                    #show_loading_screen(0.3)
-                    #hide_loading_screen()
-                    print(task[0])
-                    # Execute task (loading screen will be hidden by the task)
-                    if task[0] == "besedilna":
-                        besedilna_main(task[1], task[2], task[3])
-                    elif task[0] == "enacba":
-                        enacba_main(task[1], task[2], task[3])
-                    elif task[0] == "barve":
-                        barve_main(task[1], task[2], task[3])
-                    elif task[0] == "stopmotion":
-                        stopmotion_main(task[1], task[2])
-                    elif task[0] == "slideshow":
-                        slideshow_main(task[1], task[2], task[3])
+                    show_loading_screen(0.3)
                     
-                    naloga_index+=1
-                    #print(naloga_index!=len(naloga))
+                    # Execute task
+                    try:
+                        if task[0] == "besedilna":
+                            besedilna_main(task[1], task[2], task[3])
+                        elif task[0] == "enacba":
+                            enacba_main(task[1], task[2], task[3])
+                        elif task[0] == "barve":
+                            barve_main(task[1], task[2], task[3])
+                        elif task[0] == "stopmotion":
+                            stopmotion_main(task[1], task[2])
+                        elif task[0] == "slideshow":
+                            slideshow_main(task[1], task[2], task[3])
+                    except Exception as e:
+                        print(f"Error executing task: {e}")
+                        continue
+                        
+                    naloga_index += 1
                     
-                    # Brief loading screen between tasks unless USB removed
-                    if shared_state["present"] and naloga_index!=len(naloga):
-                        #prepare_window_transition()
+                    # Brief loading screen between tasks
+                    if shared_state["present"] and naloga_index != len(naloga):
                         show_loading_screen(0.3)
+                        time.sleep(0.3)  # Ensure loading screen is visible
                 
                 task_completed = True
 
             # Transition to screensaver
             #hide_loading_screen()
+            # In your main loop where you handle transitions:
+            # In your main loop:
             if shared_state["present"]:
-                #if not display_image_persistent("/home/lmk/Desktop/UL_PEF_logo.png"):
-                #    show_white_screen()
-                show_screensaver()
-                hide_loading_screen()
+                try:
+                    # Safe transition sequence
+                    hide_loading_screen()
+                    time.sleep(0.2)  # Increased delay
+                    
+                    # Ensure all OpenCV windows are closed
+                    cv2.destroyAllWindows()
+                    time.sleep(0.1)
+                    
+                    # Show screensaver
+                    if not show_screensaver():
+                        # Fallback to white screen
+                        show_white_screen()
+                        
+                except Exception as e:
+                    print(f"Transition error: {e}")
+                    show_white_screen()
+                
                 # Wait for restart
                 reset_count = 0
                 start_time = time.time()
@@ -1651,7 +1735,9 @@ def main():
                         reset_count = 0
                     time.sleep(0.1)
             else:
-                show_screensaver()
+                hide_loading_screen()  # Hide loading FIRST
+                time.sleep(0.1)  # Brief delay
+                show_screensaver()  # Then show screensaver
 
         monitor.terminate()
 
