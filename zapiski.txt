@@ -63,3 +63,4 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 27.06.2025 -> ni še zrihtan continous mode, še vedno se zatakne na exitu (segmentation fault)
 
 1.7.2025 -> zrihtan slideshow. Vse funkcije (razen lutka) delujejo. Exit in restart delujeta normalno
+		TO DO: dodaj da če ni bluetooth povezave na ESP32, naj izpiše "Nimam povezave do naprave za stopnice, prosim vključi napravo za stopnice in ponovno zaženi to napravo"  al neki (na enak način recimo kot "Loading ...")
