@@ -16,6 +16,7 @@ import vlc
 import glob
 import ctypes
 import queue
+import gc
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from bluetooth import *
 buf_size = 1024;
@@ -945,98 +946,201 @@ def play_video(video_path, stop_event):
     instance.release()
     return stop_event.is_set()
 
-def input_monitor(stop_event):
-    reset_count = 0
-    while not stop_event.is_set():
-        user_input = rx_and_echo()
-        if user_input == 25:
-            reset_count += 1
-            if reset_count >= 5:
-                stop_event.set()
-                break
-        else:
-            reset_count = 0
-
 def run_slideshow(folder_name, mode, display_time):
-    files = sorted(os.listdir(folder_name))
-    if not files:
-        return
-    
-    # Define repeat here before using it
-    repeat = mode > 3  # Continuous mode for modes 4-6
-    stop_event = threading.Event()
-    
-    # Start input monitoring thread
-    input_thread = threading.Thread(target=input_monitor, args=(stop_event,))
-    input_thread.daemon = True
-    input_thread.start()
-    
+    global shared_state
+
+    # Track VLC resources per-cycle
+    current_vlc_instance = None
+    current_player = None
+    exit_requested = False
+    restart_requested = False
+    cycle_count = 0
+
+    def clean_vlc_resources():
+        nonlocal current_vlc_instance, current_player
+        try:
+            if current_player:
+                current_player.stop()
+                time.sleep(0.3)  # Critical delay
+                current_player.release()
+                current_player = None
+            if current_vlc_instance:
+                time.sleep(0.3)  # Critical delay
+                current_vlc_instance.release()
+                current_vlc_instance = None
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        finally:
+            gc.collect()
+
+    def clean_all_resources():
+        clean_vlc_resources()
+        try:
+            cv2.destroyAllWindows()
+            for _ in range(3):
+                cv2.waitKey(1)
+        except:
+            pass
+
+    def input_monitor():
+        nonlocal exit_requested, restart_requested
+        reset_count = 0
+        while not exit_requested and not restart_requested:
+            user_input = rx_and_echo()
+            if user_input == 25:  # Exit
+                reset_count += 1
+                if reset_count >= 5:
+                    exit_requested = True
+                    break
+            elif user_input == 3:  # Restart
+                reset_count += 1
+                if reset_count >= 5:
+                    restart_requested = True
+                    break
+            else:
+                reset_count = 0
+
+    def display_image_safe(img_path):
+        try:
+            img = display_image_a(img_path)
+            if img is None:
+                return False
+
+            # Create fresh window each time
+            cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.imshow('Slideshow', img)
+            cv2.waitKey(1)
+
+            start_time = time.time()
+            while (time.time() - start_time) < display_time:
+                if exit_requested or restart_requested:
+                    return False
+                if cv2.waitKey(100) != -1:
+                    return False
+            return True
+        except Exception as e:
+            print(f"Image error: {e}")
+            return False
+        finally:
+            try:
+                cv2.destroyWindow('Slideshow')
+            except:
+                pass
+
+    def play_video_safe(video_path):
+        nonlocal current_vlc_instance, current_player
+        clean_vlc_resources()  # Clean any existing resources first
+        
+        try:
+            # Initialize fresh VLC instance
+            current_vlc_instance = vlc.Instance('--no-xlib --quiet')
+            current_player = current_vlc_instance.media_player_new()
+            media = current_vlc_instance.media_new(video_path)
+            current_player.set_media(media)
+            current_player.set_fullscreen(True)
+            current_player.play()
+
+            # Wait for playback to start
+            start_time = time.time()
+            while not current_player.is_playing():
+                if exit_requested or restart_requested or (time.time() - start_time > 5.0):
+                    return False
+                time.sleep(0.1)
+
+            # Monitor playback
+            while current_player.is_playing():
+                if exit_requested or restart_requested:
+                    return False
+                time.sleep(0.1)
+
+            return True
+        except Exception as e:
+            print(f"Video error: {e}")
+            return False
+        finally:
+            clean_vlc_resources()
+
     try:
-        while repeat and not stop_event.is_set() and shared_state["present"]:
-            for filename in files:
-                if stop_event.is_set() or not shared_state["present"]:
-                    break
-                    
-                file_path = os.path.join(folder_name, filename)
-                
-                should_stop = False
-                if file_path.lower().endswith(('.png', '.jpg', '.jpeg')) and mode in [1, 3, 4, 6]:
-                    should_stop = display_image(file_path, display_time, stop_event)
-                elif file_path.lower().endswith(('.mp4', '.avi', '.mov')) and mode in [2, 3, 5, 6]:
-                    should_stop = play_video(file_path, stop_event)
-                
-                if should_stop:
-                    break
+        # Main display loop
+        while (not exit_requested and 
+               not restart_requested and 
+               shared_state["present"]):
             
-            # For non-continuous modes, only run once
-            if not repeat:
+            # Start input monitor
+            input_thread = threading.Thread(target=input_monitor, daemon=True)
+            input_thread.start()
+
+            # Get files
+            try:
+                files = sorted([f for f in os.listdir(folder_name) 
+                              if f.lower().endswith(('.png','.jpg','.jpeg','.mp4','.avi','.mov'))])
+                if not files:
+                    break
+            except Exception as e:
+                print(f"Directory error: {e}")
                 break
-                
+
+            # Process files
+            for filename in files:
+                if exit_requested or restart_requested:
+                    break
+
+                file_path = os.path.join(folder_name, filename)
+                ext = os.path.splitext(filename)[1].lower()
+
+                if ext in ('.png','.jpg','.jpeg'):
+                    display_image_safe(file_path)
+                elif ext in ('.mp4','.avi','.mov'):
+                    play_video_safe(file_path)
+
+            clean_all_resources()
+            cycle_count += 1
+            print(f"Completed cycle {cycle_count}")
+
+            if mode not in (4,5,6):  # Not in continuous mode
+                break
+
+            time.sleep(1.0)  # Pause between cycles
+
     except Exception as e:
         print(f"Slideshow error: {e}")
     finally:
-        # Ensure all resources are cleaned up
-        stop_event.set()
-        cv2.destroyAllWindows()
-        if input_thread.is_alive():
-            input_thread.join(timeout=0.5)
-        time.sleep(0.1)  # Small delay to ensure cleanup completes
+        clean_all_resources()
+        if restart_requested:
+            return "restart"
+        return None
+
+
 
 def slideshow_main(folder_name, mode, image_time):
+    global shared_state
     prepare_window_transition()
+    
     try:
         folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
+        if not os.path.exists(folder_name):
+            print(f"Slideshow folder not found: {folder_name}")
+            return None
+            
         mode = int(mode.strip())
         image_time = float(image_time.strip())
         
-        # Initialize window
-        cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
-        cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        
         hide_loading_screen()
-        run_slideshow(folder_name.strip(), mode, image_time)
-    except ValueError as e:
-        print(f"Invalid slideshow parameters: {e}")
+        result = run_slideshow(folder_name, mode, image_time)
+        
+        # Handle restart request
+        if result == "restart":
+            return "restart"
+            
+        return result
+        
+    except Exception as e:
+        print(f"Slideshow error: {e}")
+        return None
     finally:
         show_loading_screen(0.1)
-        cv2.destroyAllWindows()
-
-def slideshow_main(folder_name, mode, image_time):
-    prepare_window_transition()
-    try:
-        folder_name = "/media/lmk/stopnice/slideshow/"+folder_name.strip()
-        mode = int(mode.strip())
-        image_time = float(image_time.strip())
-        
-        # Initialize window
-        cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
-        cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        
-        hide_loading_screen()
-        process_slideshow(folder_name.strip(), mode, image_time)
-    finally:
-        show_loading_screen(0.1)
-        cv2.destroyAllWindows()
+        time.sleep(0.1)
 #------------------------SLIDESHOW KONC---------------------------------
 
 #------------------------BLUETOOTH FUNKCIJE:----------------------------
@@ -1724,16 +1828,18 @@ def main():
                 
                 # Wait for restart
                 reset_count = 0
-                start_time = time.time()
-                while time.time() - start_time < 30:  # 30s timeout
+                #start_time = time.time()
+                #while time.time() - start_time < 30:  # 30s timeout
+                while shared_state["present"]:
                     key = rx_and_echo()
+                    print(f"cakam: {reset_count}, {key}")
                     if key == 3:
                         reset_count += 1
                         if reset_count >= 5:
                             break
                     else:
                         reset_count = 0
-                    time.sleep(0.1)
+                #    time.sleep(0.1)
             else:
                 hide_loading_screen()  # Hide loading FIRST
                 time.sleep(0.1)  # Brief delay
