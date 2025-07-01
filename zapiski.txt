@@ -61,3 +61,5 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 		NUJNO popravi break za continous mode ("25"x5) ker se zatakne v  "Loading..."
 
 27.06.2025 -> ni še zrihtan continous mode, še vedno se zatakne na exitu (segmentation fault)
+
+1.7.2025 -> zrihtan slideshow. Vse funkcije (razen lutka) delujejo. Exit in restart delujeta normalno
