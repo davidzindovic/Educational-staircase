@@ -1146,54 +1146,103 @@ def slideshow_main(folder_name, mode, image_time):
 #------------------------BLUETOOTH FUNKCIJE:----------------------------
 def rx_and_echo():
     global sock, shared_state
-    sock.send("\nsend anything\n")
-    cifra=0
-    first=True
-    while cifra==0:
-        if first is False:
-            data = sock.recv(buf_size)
-        if first is True:
-            data=False
-            first=False
+    
+    if sock is None:
+        # If we're in the no-connection state, just return 0
+        # (the message is already displayed permanently)
+        return 0
+        
+    try:
+        sock.send("\nsend anything\n")
+        cifra = 0
+        first = True
+        while cifra == 0:
+            if first is False:
+                data = sock.recv(buf_size)
+            if first is True:
+                data = False
+                first = False
 
-        if shared_state["present"]==False:
-            print("MANJKA USB")
-            return 0
-        if data:
-            neki=str(data)
-            if(neki[3]=='t'):
-                cifra=9
-            elif(neki[3]=='n'):
-                cifra=10
-            elif(neki[3]=='r'):
-                cifra=13
-            else:
-                cifra=int(neki[4],16)*16+int(neki[5],16)
-            print("INPUT: "+str(cifra))
-            return cifra
-            
+            if shared_state["present"] == False:
+                print("MANJKA USB")
+                return 0
+            if data:
+                neki = str(data)
+                if(neki[3] == 't'):
+                    cifra = 9
+                elif(neki[3] == 'n'):
+                    cifra = 10
+                elif(neki[3] == 'r'):
+                    cifra = 13
+                else:
+                    cifra = int(neki[4],16)*16 + int(neki[5],16)
+                print("INPUT: " + str(cifra))
+                return cifra
+    except Exception as e:
+        print(f"Bluetooth communication error: {e}")
+        return 0
+
 def bluetooth_setup():
-	global sock
-	#MAC address of ESP32
-	addr = "C8:F0:9E:E1:50:F2"
-	service_matches = find_service( address = addr )
+    global sock
+    #MAC address of ESP32
+    addr = "C8:F0:9E:E1:50:F2"
+    
+    try:
+        service_matches = find_service(address=addr)
+        
+        if len(service_matches) == 0:
+            print("couldn't find the SampleServer service =(")
+            # Display permanent message on screen
+            display_no_connection_message()
+            # This line will never be reached as display_no_connection_message() blocks
+            return False
 
-	if len(service_matches) == 0:
-		print("couldn't find the SampleServer service =(")
-		sys.exit(0)
+        first_match = service_matches[0]
+        port = first_match["port"]
+        name = first_match["name"]
+        host = first_match["host"]
 
-	first_match = service_matches[0]
-	port = first_match["port"]
-	name = first_match["name"]
-	host = first_match["host"]
+        port = 1
 
-	port=1
-
-	# Create the client socket
-	sock=BluetoothSocket(RFCOMM)
-	sock.connect((host, port))
-
-	#sock.close()
+        # Create the client socket
+        sock = BluetoothSocket(RFCOMM)
+        sock.connect((host, port))
+        return True
+        
+    except Exception as e:
+        print(f"Bluetooth connection error: {e}")
+        # Display permanent message on screen
+        display_no_connection_message()
+        # This line will never be reached as display_no_connection_message() blocks
+        return False
+        
+def display_no_connection_message():
+    root = tk.Tk()
+    
+    # Get actual screen dimensions
+    width = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
+    
+    # Manual fullscreen implementation
+    root.geometry(f"{width}x{height}+0+0")
+    root.overrideredirect(True)
+    root.configure(bg='white')
+    
+    # Message with dynamic font sizing
+    font_size = max(30, min(90, int(height/10)))
+    msg = tk.Label(root,
+                 text="Nimam podatka o stanju stopnic\n\nPONOVNO ZAŽENI NAPRAVO",
+                 font=("Arial", font_size, "bold"),
+                 bg='white',
+                 fg='red',  # More attention-grabbing
+                 justify='center')
+    msg.place(relx=0.5, rely=0.5, anchor='center')
+    
+    # Completely disable input
+    for seq in ['<Button>', '<Key>', '<Motion>']:
+        root.bind_all(seq, lambda e: None)
+    
+    root.mainloop()
 #-----------------------BLUETOOTH FUNKCIJE KONC-----------------
 
 #---------------------------FULLSCREEN--------------------------
@@ -1738,7 +1787,12 @@ def main():
         monitor = Process(target=usb_m, args=(shared_state,))
         monitor.start()
         
-        bluetooth_setup()
+        # Attempt Bluetooth connection
+        bt_connected = bluetooth_setup()
+        if not bt_connected:
+            # If Bluetooth fails, we still continue with USB monitoring
+            pass
+        
         file_name = "izvedba.txt"
         
         while True:
