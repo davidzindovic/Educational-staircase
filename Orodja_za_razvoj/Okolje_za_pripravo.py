@@ -56,19 +56,25 @@ MULTI_DIGIT_TIMEOUT = 1.5  # 1.5 seconds timeout between digits
 last_key_time = 0
 exit_flag = False
 input_lock = threading.Lock()
+final_number=False
 
 def on_key_press(event):
-    global last_key_pressed, key_pressed_event, multi_digit_mode, current_number, number_start_time, exit_flag
+    global last_key_pressed, key_pressed_event, multi_digit_mode, current_number, number_start_time, exit_flag, final_number
     
     with input_lock:
         try:
             # Start multi-digit mode
             if event.name == 'i' and event.event_type == keyboard.KEY_DOWN:
                 multi_digit_mode = True
+                final_number=False
                 current_number = ""
                 number_start_time = time.time()
                 return
-                
+            elif event.name == 'i' and event.event_type == keyboard.KEY_UP and multi_digit_mode==True and final_number==False:
+                multi_digit_mode=False
+                final_number=True
+                return
+            
             # Handle digit input
             if event.name.isdigit() and event.event_type == keyboard.KEY_DOWN:
                 if multi_digit_mode:
@@ -77,6 +83,8 @@ def on_key_press(event):
                 else:
                     last_key_pressed = int(event.name)
                     key_pressed_event.set()
+                    #if 0<last_key_pressed<26:
+                    #    final_number=True
                     
             # Special keys work in any mode
             if event.event_type == keyboard.KEY_DOWN:
@@ -92,29 +100,45 @@ def on_key_press(event):
             print(f"Key error: {e}")
 
 def rx_and_echo():
-    global last_key_pressed, multi_digit_mode, current_number, exit_flag
+    global last_key_pressed, multi_digit_mode, current_number, exit_flag, final_number
     
     with input_lock:
+        #if current_number!="":
+        #    print(f"multi: {multi_digit_mode}, current: {current_number}, exit: {exit_flag}")
         # Check for multi-digit completion
         if multi_digit_mode and time.time() - number_start_time > 1.5:
             if current_number:
                 try:
                     last_key_pressed = int(current_number)
+                    #final_number=True
                     if last_key_pressed == 25:
                         exit_flag = True
                 except ValueError:
                     pass
-            multi_digit_mode = False
-            current_number = ""
-            
+            #multi_digit_mode = False
+            #current_number = ""
+        
+        #if current_number!="":
+        #    print(f"multi: {multi_digit_mode}, current: {current_number}, exit: {exit_flag}")
+        #    print("--------------")        
         if exit_flag:
+            #exit_flag=False
             return 25
+            
+        if multi_digit_mode==False and final_number==True and 0<int(current_number)<26:
+            print(f"kombinirano {int(current_number)}")
+            final_number=False
+            return int(current_number)
             
         if last_key_pressed is not None:
             result = last_key_pressed
-            last_key_pressed = None
-            return result
+            last_key_pressed = None 
             
+            if multi_digit_mode==False and final_number==False:
+                print(f"navadna cifra: {result}")
+                final_number=False
+                return result
+
     # Small delay to prevent CPU overload
     time.sleep(0.05)
     return None
@@ -122,6 +146,7 @@ def rx_and_echo():
 # Initialize keyboard hooks
 keyboard.hook(on_key_press, suppress=False)
 
+'''
 def rx_and_echo():
     """Replacement for Bluetooth input that uses keyboard"""
     global last_key_pressed, key_pressed_event, multi_digit_mode, current_number, number_start_time
@@ -146,6 +171,7 @@ def rx_and_echo():
     
     # Return the key that was pressed
     return last_key_pressed
+'''
 
 # Remove all Bluetooth setup code and replace with this simple initialization
 def bluetooth_setup():
@@ -319,37 +345,7 @@ def close_img():
     if _image_window:
         _image_window.after(0, _image_window.quit)
 
-'''
-def besedilna_main(path_za_slike,naloga,resitev):
-    folder_path = r"/media/lmk/stopnice/besedilna_slike/"+path_za_slike
-    global user_input, shared_state
-    if not os.path.isdir(folder_path):
-        print("Invalid folder path, please try again.")
-        exit()
 
-    # Get the file path and the user input number
-    
-    #file_path = r"D:\stopnice\besedilna_tekst\besedilna.txt"
-    
-    # Load the number from the file
-    #file_number = load_number_from_file(file_path)
-    file_number=resitev
-
-    combined_image = create_image_grid(folder_path,naloga, "q", file_number)
-    display_fullscreen_image(combined_image,1)
-    
-    #user_input = int(input("Enter a number: "))
-    
-    if file_number is None:
-        print("Error: Could not load the number from the file.")
-        exit()
-    
-    if shared_state["present"]==True:
-        combined_image = create_image_grid(folder_path,naloga, user_input, file_number)
-    
-    if shared_state["present"]==True:
-        display_fullscreen_image(combined_image,0)
-'''
 def besedilna_main(path_za_slike, naloga, resitev):
     global shared_state
     hide_loading_screen()  # Hide loading before starting
@@ -709,32 +705,39 @@ def plot_colors(colors,stevilo_barv):
     
     def input_handler():
         nonlocal selected_indices, max_barv
-        #global max_colors_to_blend
+        global exit_flag, final_number, current_number
 
         reset_count=0
         while True:
             selected_index = rx_and_echo()
             
-            if selected_index == 25:
-                reset_count += 1
-                if reset_count >= 5:
-                    root.after(0, root.quit)
-                    #root.destroy()
-                    break
-                continue
-            else:
-                reset_count = 0
+            if selected_index is not None:
+                print(f"index: {selected_index}")
+                if selected_index == 25:
+                    reset_count += 1
+                    if reset_count >= 5:
+                        exit_flag=False
+                        root.after(0, root.quit)
+                        #root.destroy()
+                        break
+                    continue
+                else:
+                    reset_count = 0
+                
+                #d1=selected_indices.copy()
+                #ld1=len(d1)
+                #d2=max_barv
+                #print(ld1!=d2)
+                #if len(selected_indices)<max_barv:
+                #print(f"ssss: {len(selected_indices)} vs {max_barv} | {int(len(selected_indices))!=int(max_barv)}")
+                
+                if selected_index is not None:
+                    print(f"selected index: {selected_index}")
+                    if (1 <= selected_index <= len(colors)) and (int(len(selected_indices))!=int(max_barv)):
+                        print("append")
+                        selected_indices.append(selected_index)
+                        root.after(0, update_display)
             
-            #d1=selected_indices.copy()
-            #ld1=len(d1)
-            #d2=max_barv
-            #print(ld1!=d2)
-            #if len(selected_indices)<max_barv:
-            print(f"ssss: {len(selected_indices)} vs {max_barv} | {int(len(selected_indices))!=int(max_barv)}")
-            if (1 <= selected_index <= len(colors)) and (int(len(selected_indices))!=int(max_barv)):
-                print("append")
-                selected_indices.append(selected_index)
-                root.after(0, update_display)
 
     hide_loading_screen()
     
@@ -747,6 +750,7 @@ def plot_colors(colors,stevilo_barv):
     input_thread.start()
 
     root.mainloop()
+    root.quit()
     root.destroy()
 
 def complex_barvanje(colors):
@@ -756,10 +760,10 @@ def complex_barvanje(colors):
     root.overrideredirect(True)
     root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
     root.configure(bg='white')
-    
+
     canvas = tk.Canvas(root, bg='white', highlightthickness=0)
     canvas.pack(fill=tk.BOTH, expand=True)
-    
+
     # Display legend
     create_color_legend(canvas, colors, 50, 50)
     
@@ -769,30 +773,37 @@ def complex_barvanje(colors):
         400, 300, 700, 600,
         fill=current_color, outline="black", width=3
     )
+
     canvas.create_text(550, 250, text="Current Color", font=("Arial", 24))
     reset_count = 0  # Initialize reset counter
     hide_loading_screen()
     def update_display():
         nonlocal current_color, reset_count
+        global exit_flag, final_number, current_number
         
+        selected_index=0
         while True:
             selected_index = rx_and_echo()
             
-            if selected_index == 25:
-                reset_count += 1
-                if reset_count >= 5:
-                    root.after(0, root.quit)
-                    break
-                current_color = "#ffffff"
-                canvas.itemconfig(color_display, fill=current_color)
-                continue
-            else:
-                reset_count = 0
-                
-            if 1 <= selected_index <= len(colors):
-                current_color = blend_colors(current_color, colors[selected_index-1])
-                canvas.itemconfig(color_display, fill=current_color)
-    
+            if selected_index is not None:
+                print(f"index: {selected_index}")
+                if selected_index == 25:
+                    reset_count += 1
+                    if reset_count >= 5:
+                        exit_flag=False
+                        root.after(0, root.quit)
+                        break
+                    current_color = "#ffffff"
+                    canvas.itemconfig(color_display, fill=current_color)
+                    continue
+                else:
+                    reset_count = 0
+     
+                if selected_index is not None:
+                    if 1 <= selected_index <= len(colors):
+                        current_color = blend_colors(current_color, colors[selected_index-1])
+                        canvas.itemconfig(color_display, fill=current_color)
+
     # Start input handler in separate thread
     input_thread = threading.Thread(target=update_display)
     input_thread.daemon = True
@@ -820,7 +831,7 @@ def barve_main(mode, attempts, colors_all):
         colors = colors_all.split(',')
         #root = tk.Tk()
         #root.attributes('-fullscreen', True)
-        
+        print(mode, colors)
         if mode == "simple":
             plot_colors(colors,attempts)
 
@@ -852,18 +863,20 @@ def display_images(folder, mode):
             image_path = os.path.join(folder, f"{current_index}.jpg")
             if not os.path.exists(image_path):
                 break
-                
+  
             img = display_image_one(image_path)
+            print(image_path)
             if img is None:
                 break
-                
+
             cv2.imshow('stopmotion', img)
             cv2.waitKey(1)
             
             # Check for exit
             if exit_flag:
+                exit_flag=False
                 break
-                
+
             # Get input with timeout
             start_time = time.time()
             user_input = None
@@ -875,6 +888,7 @@ def display_images(folder, mode):
                 
             # Process input
             if user_input == 25:
+                exit_flag=False
                 window_active = False
                 break
                 
@@ -884,7 +898,7 @@ def display_images(folder, mode):
                 current_index += 1
             elif user_input == current_index - 1 and current_index > 1:
                 current_index -= 1
-                
+
         except cv2.error as e:
             print(f"Window error: {e}")
             window_active = False
@@ -898,46 +912,7 @@ def display_images(folder, mode):
     except:
         pass
     exit_flag = False
-#---------
-'''
-def display_image_one(image_path):
-    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Read with alpha channel if present
-    if img is None:
-        print(f"Error loading image: {image_path}")
-        return
 
-    if len(img.shape) == 3 and img.shape[2] == 4:  # If image has transparency (RGBA)
-        # Separate the alpha channel
-        alpha_channel = img[:, :, 3] / 255.0
-        img = img[:, :, :3]  # Remove the alpha channel
-
-        # Create a white background
-        white_background = np.ones_like(img, dtype=np.uint8) * 255  # White background
-        img = (img * alpha_channel[:, :, None] + white_background * (1 - alpha_channel[:, :, None])).astype(np.uint8)
-
-    img_h, img_w = img.shape[:2]
-
-    # Scale down if too large
-    if img_w > MAX_WIDTH or img_h > MAX_HEIGHT:
-        scale = min(MAX_WIDTH / img_w, MAX_HEIGHT / img_h)
-        img_w = int(img_w * scale)
-        img_h = int(img_h * scale)
-        img = cv2.resize(img, (img_w, img_h), interpolation=cv2.INTER_AREA)
-
-    # Create a white background
-    canvas = np.ones((MAX_HEIGHT, MAX_WIDTH, 3), dtype=np.uint8) * 255
-
-    # Center the image
-    x_offset = (MAX_WIDTH - img_w) // 2
-    y_offset = (MAX_HEIGHT - img_h) // 2
-    canvas[y_offset:y_offset+img_h, x_offset:x_offset+img_w] = img
-
-    cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-    cv2.imshow('stopmotion', canvas)
-    cv2.waitKey(int(1000))
-''' 
 
 def display_image_one(image_path):
     global persistent_root
@@ -993,14 +968,9 @@ def display_image_one(image_path):
     y_offset = (screen_height - new_height) // 2
     canvas[y_offset:y_offset+new_height, x_offset:x_offset+new_width] = resized_img
     
-    # Create window
-    cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    
     # Display image
     display_img = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
-    cv2.imshow('stopmotion', display_img)
-    cv2.waitKey(1)
+    return display_img
 '''
 def stopmotion_main(folder, mode):
 	folder="/media/lmk/stopnice/stopmotion/"+folder
@@ -1013,7 +983,6 @@ def stopmotion_main(folder, mode):
     try:
         usb_path = find_usb_drive()
         folder = usb_path+"stopmotion\\"+folder
-        
         # Initialize window first
         cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -1025,12 +994,10 @@ def stopmotion_main(folder, mode):
         hide_loading_screen()
         display_images(folder, mode)
         complete_window_transition('stopmotion')  # Pass window name
-        print("dd")
     finally:
         #cv2.destroyAllWindows()
         show_loading_screen(0.3)
         cv2.destroyAllWindows()
-        print("cc")
 #------------------------STOPMOTION KONC--------------------------------
 
 #------------------------SLIDESHOW--------------------------------------
@@ -1095,7 +1062,7 @@ def play_video(video_path, stop_event):
     return stop_event.is_set()
 
 def run_slideshow(folder_name, mode, display_time):
-    global shared_state
+    global shared_state, exit_flag
 
     # Track VLC resources per-cycle
     current_vlc_instance = None
@@ -1132,6 +1099,8 @@ def run_slideshow(folder_name, mode, display_time):
 
     def input_monitor():
         nonlocal exit_requested, restart_requested
+        global exit_flag
+        
         reset_count = 0
         while not exit_requested and not restart_requested:
             user_input = rx_and_echo()
@@ -1232,6 +1201,7 @@ def run_slideshow(folder_name, mode, display_time):
             # Process files
             for filename in files:
                 if exit_requested or restart_requested:
+                    exit_flag=False
                     break
 
                 file_path = os.path.join(folder_name, filename)
@@ -1385,41 +1355,6 @@ def display_image_with_borders(image_path, display_time):
     cv2.waitKey(int(display_time * 1000))
     cv2.destroyAllWindows()
 
-'''    
-def display_fullscreen_image(image, iinput):
-    global root, img, shared_state, persistent_root
-    
-    if shared_state["present"]:
-        try:
-            if root:
-                root.destroy()
-        except:
-            pass
-        
-        # Create new window but don't show it yet
-        root = tk.Tk()
-        root.attributes('-fullscreen', True)
-        root.attributes('-topmost', True)
-        img = ImageTk.PhotoImage(image)
-        label = tk.Label(root, image=img)
-        label.pack()
-        
-        # Now synchronize the transition
-        hide_loading_screen_after_new_window(root)
-        
-        if iinput == 1 and shared_state["present"]:
-            input_thread = threading.Thread(target=close_img)
-            input_thread.daemon = True
-            input_thread.start()
-            root.mainloop()
-        elif not shared_state["present"]:
-            root.after(1, root.destroy)
-            root.mainloop()
-        elif iinput == 0:
-            root.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, root.destroy)
-            root.mainloop()
-'''
-
 global_images=[]
 
 def display_fullscreen_image(image, iinput):
@@ -1443,21 +1378,6 @@ def display_fullscreen_image(image, iinput):
         
         _image_label = tk.Label(_image_window, bg='white')  # White background
         _image_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)  # Add padding
-    
-    '''
-    #adapt colors background:
-    # Add this before creating img_tk
-    from PIL import ImageStat
-    def get_dominant_color(pil_img):
-        img = pil_img.copy()
-        img = img.convert("RGB")
-        img = img.resize((1, 1), Image.LANCZOS)
-        return img.getpixel((0, 0))
-
-    dominant_color = '#%02x%02x%02x' % get_dominant_color(pil_image)
-    _image_window.configure(bg=dominant_color)
-    _image_label.config(bg=dominant_color)
-    '''
     
     
     # Create and anchor the image
