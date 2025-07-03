@@ -89,7 +89,7 @@ def on_key_press(event):
             # Special keys work in any mode
             if event.event_type == keyboard.KEY_DOWN:
                 if event.name == 'esc':
-                    exit_flag = True
+                    #exit_flag = True
                     last_key_pressed = 25
                     key_pressed_event.set()
                 elif event.name == 'enter':
@@ -125,10 +125,11 @@ def rx_and_echo():
             #exit_flag=False
             return 25
             
-        if multi_digit_mode==False and final_number==True and 0<int(current_number)<26:
-            print(f"kombinirano {int(current_number)}")
-            final_number=False
-            return int(current_number)
+        if multi_digit_mode==False and final_number==True and current_number is not None:
+            if 0<int(current_number)<26:
+                print(f"kombinirano {int(current_number)}")
+                final_number=False
+                return int(current_number)
             
         if last_key_pressed is not None:
             result = last_key_pressed
@@ -242,8 +243,8 @@ def load_number_from_file(file_path):
         print(f"Error loading number from file: {e}")
         return None
 
-def create_image_grid(folder_path,naloga, user_input, file_number, gap=10, scale_factor=0.7, stevilka_scale=0.5):
-    global shared_state
+def create_image_grid(folder_path,naloga, file_number, gap=10, scale_factor=0.7, stevilka_scale=0.5):
+    global shared_state, user_input
     
     if shared_state["present"]==True:
         #potencialni dodatni parametri: stevilo_stolpcev,stevilo_vrstic,stevilo_slik,
@@ -341,13 +342,23 @@ def display_fullscreen_image_besedilna(image, iinput):
 
 def close_img():
     global user_input, _image_window
-    user_input = rx_and_echo() 
-    if _image_window:
-        _image_window.after(0, _image_window.quit)
+    
+    done_flag=False
+
+    while not done_flag:
+        user_input = rx_and_echo()
+        
+        if user_input is not None:
+            if 0<int(user_input)<26:
+                user_input=int(user_input)
+                if _image_window:
+                    _image_window.after(0, _image_window.quit)
+                done_flag=True
 
 
 def besedilna_main(path_za_slike, naloga, resitev):
-    global shared_state
+    global shared_state, user_input
+    
     hide_loading_screen()  # Hide loading before starting
     
     # Find USB drive
@@ -361,21 +372,20 @@ def besedilna_main(path_za_slike, naloga, resitev):
         print("Invalid folder path")
         return
 
+    user_input="q"
     file_number = resitev
-    combined_image = create_image_grid(folder_path, naloga, "q", file_number)
+    combined_image = create_image_grid(folder_path, naloga,file_number)
+
     if combined_image:
         #display_fullscreen_image_besedilna(combined_image,1)
         display_fullscreen_image(combined_image, 1)
-    
+
     if file_number is None:
         print("Error: Could not load the number from the file.")
         return
     
-    #ne rabis ker je ze v close image
-    #user_input=rx_and_echo()
-    
     if shared_state["present"]:
-        combined_image = create_image_grid(folder_path, naloga, user_input, file_number)
+        combined_image = create_image_grid(folder_path, naloga,file_number)
         display_fullscreen_image(combined_image, 0)
     
     show_loading_screen(0.1)  # Show loading briefly when done
@@ -401,7 +411,7 @@ def display_slike(image_paths, reserve_space=True):
         return
     if shared_state["present"]==True:
         images = [cv2.cvtColor(cv2.imread(img), cv2.COLOR_BGR2RGB) for img in image_paths if cv2.imread(img) is not None]
-        
+
         if not images:
             print("No valid images found!")
             return
@@ -416,7 +426,7 @@ def display_slike(image_paths, reserve_space=True):
         if reserve_space:
             placeholder = np.full((min_height, min_height, 3), (255, 255, 255), dtype=np.uint8)
             images_resized.append(placeholder)
-        
+
         # Arrange images in a single row
         img_grid = np.hstack(images_resized)
            
@@ -435,7 +445,6 @@ def display_slike(image_paths, reserve_space=True):
         if new_height > screen_height:
             new_height = screen_height
             new_width = int(screen_height * aspect)
-            
         # Resize final image with black bars (letterbox effect)
         final_image = np.full((screen_height, screen_width, 3), (255, 255, 255), dtype=np.uint8)
         x_offset = (screen_width - new_width) // 2
@@ -444,7 +453,6 @@ def display_slike(image_paths, reserve_space=True):
         resized_grid = cv2.resize(img_grid, (new_width, new_height))
         
         final_image[y_offset:y_offset + new_height, x_offset:x_offset + new_width] = resized_grid
-        
     if shared_state["present"]==True:
         # Display in fullscreen
         cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
@@ -478,64 +486,7 @@ def mask_numbers_before_underscore(equation_text):
                 j -= 1
         i += 1
     return "".join(masked_text)
-'''    
-def enacba_main(path_za_slike,naloga,resitev):
-    global shared_state
-    image_folder = r"/media/lmk/stopnice/enacba_slike/"+path_za_slike
-    """
-    if not os.path.exists(txt_file):
-        print("Text file not found!")
-    else:
-        with open(txt_file, 'r') as file:
-            text_content = file.read().strip()  # Read entire file and strip whitespace
-    """    
-    correct_answer = resitev
-    masked_text = mask_numbers_before_underscore(naloga)
-    equation_parts = list(masked_text)
-    underscore_index = masked_text.index("_")
-    
-    #print(correct_answer)
-    #print(masked_text)
-    #print(equation_parts)
-    #print(underscore_index)
-    
-    # Initial display with "_" placeholder
-    image_paths = [os.path.join(image_folder, name + ".JPG") for name in equation_parts]
-    print(image_paths)
-    display_slike(image_paths)
-    
-    #user_input = input("Enter your answer for '_': ")
-    
-    index_update = 0
-    user_answer=0
-    for cifra in correct_answer:
-        cifra_odg = 99
-		#user_input = input("Števka '_': ")
-        while (cifra_odg == 99):
-            cifra_odg = rx_and_echo()
-            if (cifra_odg > 9):
-                cifra_odg = 99
-        if shared_state["present"]==True:
-            user_input=str(cifra_odg)
-            user_answer+=pow(10,len(correct_answer)-(index_update+1))*int(user_input)
-            image_paths[underscore_index + index_update] = os.path.join(image_folder, user_input + ".JPG")
-            index_update += 1
-            display_slike(image_paths)
-        if shared_state["present"]==False:
-            break
-	#print(str(type(user_answer)) + " " + str(type(correct_answer)))
-    if shared_state["present"]==True:
-        if int(user_answer) == int(correct_answer):
-            image_paths.append(os.path.join(image_folder, "check.JPG"))
-        else:
-            image_paths.append(os.path.join(image_folder, "wrong.JPG"))
-        
-        display_slike(image_paths, reserve_space=False)
-        
-        #print("Press any key to exit...")
-        cv2.waitKey(cakanje_pri_prikazu_pravilnega_rezultata*1000)  # Wait for key press before closing
-    cv2.destroyAllWindows()
-'''
+
 def enacba_main(path_za_slike, naloga, resitev):
     global shared_state
     prepare_window_transition()
@@ -546,24 +497,24 @@ def enacba_main(path_za_slike, naloga, resitev):
         if not usb_path:
             print("USB not found!")
             return
-            
+
         image_folder = os.path.join(usb_path, "enacba_slike", path_za_slike)
         correct_answer = resitev
         masked_text = mask_numbers_before_underscore(naloga)
         equation_parts = list(masked_text)
-        
+
         # Initial display
         image_paths = [os.path.join(image_folder, name + ".JPG") for name in equation_parts]
         
         # Create OpenCV window first
         cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        
+
         hide_loading_screen()
-        
+
         display_slike(image_paths)
         complete_window_transition("Image Display")  # Pass window name
-    
+
         #num_underscores=equation_parts.count('_')
         underscore_index=0
         for u in range(len(equation_parts)):
@@ -579,16 +530,19 @@ def enacba_main(path_za_slike, naloga, resitev):
             cifra_odg = 99
             while (cifra_odg == 99):
                 cifra_odg = rx_and_echo()
-                if (cifra_odg > 9):
-                    cifra_odg = 99
-
+                if cifra_odg is not None:
+                    if (int(cifra_odg) > 9):
+                        cifra_odg = 99
+                else:
+                    cifra_odg=99
             if shared_state["present"]:
                 user_input = str(cifra_odg)
                 user_answer += pow(10, len(correct_answer)-(index_update+1))*int(user_input)
                 image_paths[underscore_index+index_update] = os.path.join(image_folder, user_input + ".JPG")
                 index_update += 1
-                display_slike(image_paths)
-
+                display_slike(image_paths, reserve_space=False)
+                cv2.waitKey(1)
+        
         # Show result
         if shared_state["present"]:
             if int(user_answer) == int(correct_answer):
@@ -712,27 +666,20 @@ def plot_colors(colors,stevilo_barv):
             selected_index = rx_and_echo()
             
             if selected_index is not None:
-                print(f"index: {selected_index}")
+                #print(f"index: {selected_index}")
                 if selected_index == 25:
                     reset_count += 1
                     if reset_count >= 5:
                         exit_flag=False
                         root.after(0, root.quit)
-                        #root.destroy()
                         break
                     continue
                 else:
                     reset_count = 0
-                
-                #d1=selected_indices.copy()
-                #ld1=len(d1)
-                #d2=max_barv
-                #print(ld1!=d2)
-                #if len(selected_indices)<max_barv:
-                #print(f"ssss: {len(selected_indices)} vs {max_barv} | {int(len(selected_indices))!=int(max_barv)}")
+
                 
                 if selected_index is not None:
-                    print(f"selected index: {selected_index}")
+                    #print(f"selected index: {selected_index}")
                     if (1 <= selected_index <= len(colors)) and (int(len(selected_indices))!=int(max_barv)):
                         print("append")
                         selected_indices.append(selected_index)
@@ -811,40 +758,24 @@ def complex_barvanje(colors):
     
     root.mainloop()
     root.destroy()
-'''
-def barve_main(mode, attempts, colors_all):
-    global shared_state
-    colors = colors_all.split(',')
-    
-    if mode == "simple":
-        plot_colors(colors)
-    elif mode == "complex":
-        complex_barvanje(colors)
-'''
+
 def barve_main(mode, attempts, colors_all):
     global shared_state
     prepare_window_transition()
-    #max_colors_to_blend=attempts
-    #print("attemps: " +str(attempts))
-    #print("max: "+str(max_colors_to_blend))
+
     try:
         colors = colors_all.split(',')
-        #root = tk.Tk()
-        #root.attributes('-fullscreen', True)
+
         print(mode, colors)
         if mode == "simple":
             plot_colors(colors,attempts)
 
         elif mode == "complex":
             complex_barvanje(colors)
-            
-        #complete_window_transition(root)  # Pass the new window
-        #root.mainloop()
         
     finally:
-        print("finaly :)")
-        #show_loading_screen(0.1)
-    print("!!!")
+        pass
+
 #------------------------BARVE KONC-------------------------------------
 
 #------------------------STOPMOTION------------------------------------- 
@@ -858,6 +789,7 @@ def display_images(folder, mode):
     cv2.namedWindow('stopmotion', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('stopmotion', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     
+    exit_counter=0
     while shared_state["present"] and window_active:
         try:
             image_path = os.path.join(folder, f"{current_index}.jpg")
@@ -865,7 +797,7 @@ def display_images(folder, mode):
                 break
   
             img = display_image_one(image_path)
-            print(image_path)
+            #print(image_path)
             if img is None:
                 break
 
@@ -873,25 +805,31 @@ def display_images(folder, mode):
             cv2.waitKey(1)
             
             # Check for exit
-            if exit_flag:
-                exit_flag=False
-                break
+            #if exit_flag:
+            #    exit_flag=False
+            #    break
 
             # Get input with timeout
             start_time = time.time()
             user_input = None
             while time.time() - start_time < 0.1:  # 100ms timeout
                 user_input = rx_and_echo()
+                #if user_input is not None:
                 if user_input is not None:
-                    break
+                    if 0<int(user_input)<26:
+                        break
                 time.sleep(0.01)
                 
             # Process input
             if user_input == 25:
-                exit_flag=False
-                window_active = False
-                break
+                exit_counter+=1
                 
+                if exit_counter==5:
+                    exit_flag=False
+                    window_active = False
+                    break
+                
+            
             # Navigation logic
             file_count = len([f for f in os.listdir(folder) if f.endswith('.jpg')])
             if user_input == current_index + 1 and current_index < file_count:
@@ -912,7 +850,7 @@ def display_images(folder, mode):
     except:
         pass
     exit_flag = False
-
+    exit_counter=0
 
 def display_image_one(image_path):
     global persistent_root
@@ -1104,18 +1042,20 @@ def run_slideshow(folder_name, mode, display_time):
         reset_count = 0
         while not exit_requested and not restart_requested:
             user_input = rx_and_echo()
-            if user_input == 25:  # Exit
-                reset_count += 1
-                if reset_count >= 5:
-                    exit_requested = True
-                    break
-            elif user_input == 3:  # Restart
-                reset_count += 1
-                if reset_count >= 5:
-                    restart_requested = True
-                    break
-            else:
-                reset_count = 0
+            
+            if user_input is not None and 0<int(user_input)<26:
+                if user_input == 25:  # Exit
+                    reset_count += 1
+                    if reset_count >= 5:
+                        exit_requested = True
+                        break
+                elif user_input == 3:  # Restart
+                    reset_count += 1
+                    if reset_count >= 5:
+                        restart_requested = True
+                        break
+                else:
+                    reset_count = 0
 
     def display_image_safe(img_path):
         try:
@@ -1359,26 +1299,29 @@ global_images=[]
 
 def display_fullscreen_image(image, iinput):
     global _image_window, _image_label, _image_keeper, shared_state
-    
+
     # Convert image to RGB format upfront
     pil_image = image.convert("RGB")
     
     # Create window if needed
     if _image_window is None or not _image_window.winfo_exists():
         _image_window = tk.Toplevel()
-        
+        #_image_window=tk.Tk()
+
         # Force true fullscreen
-        _image_window.overrideredirect(True)
+        #_image_window.overrideredirect(True)
         _image_window.geometry("{0}x{1}+0+0".format(
             _image_window.winfo_screenwidth(), 
             _image_window.winfo_screenheight()))
+
         _image_window.attributes('-fullscreen', True)
         _image_window.attributes('-topmost', True)
+        #_image_window.attributes('-fullscreen', True)
         _image_window.configure(bg='white')  # Set default background to white
-        
+
         _image_label = tk.Label(_image_window, bg='white')  # White background
         _image_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)  # Add padding
-    
+
     
     # Create and anchor the image
     img_tk = ImageTk.PhotoImage(pil_image)
@@ -1387,7 +1330,7 @@ def display_fullscreen_image(image, iinput):
         bg='white',  # Ensure label background is white
         compound='center'  # Center the image in the label
     )
-    
+
     # THE CRITICAL LINE - makes reference permanent
     _image_keeper = (_image_window, _image_label, img_tk)
     
@@ -1409,11 +1352,11 @@ def display_fullscreen_image(image, iinput):
         img_tk = ImageTk.PhotoImage(pil_image)
         _image_label.config(image=img_tk)
         _image_keeper = (_image_window, _image_label, img_tk)  # Update reference
-    
+
     # Force full display update
     _image_window.update_idletasks()
     _image_window.update()
-    
+
     # Handle input and timing
     if shared_state["present"]:
         if iinput == 1:
@@ -1857,7 +1800,7 @@ def main():
                     time.sleep(0.1)
                     
                     # Show screensaver
-                    if not show_screensaver():
+                    if not show_screensaver():14933333
                         # Fallback to white screen
                         show_white_screen()
                         
@@ -1871,13 +1814,14 @@ def main():
                 #while time.time() - start_time < 30:  # 30s timeout
                 while shared_state["present"]:
                     key = rx_and_echo()
-                    print(f"cakam: {reset_count}, {key}")
-                    if key == 3:
-                        reset_count += 1
-                        if reset_count >= 5:
-                            break
-                    else:
-                        reset_count = 0
+                    #print(f"cakam: {reset_count}, {key}")
+                    if key is not None:
+                        if int(key) == 3:
+                            reset_count += 1
+                            if reset_count >= 5:
+                                break
+                        else:
+                            reset_count = 0
                 #    time.sleep(0.1)
             else:
                 hide_loading_screen()  # Hide loading FIRST
