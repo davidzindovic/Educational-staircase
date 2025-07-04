@@ -1800,7 +1800,7 @@ def main():
                     time.sleep(0.1)
                     
                     # Show screensaver
-                    if not show_screensaver():14933333
+                    if not show_screensaver():
                         # Fallback to white screen
                         show_white_screen()
                         
