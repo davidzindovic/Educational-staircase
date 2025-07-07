@@ -65,5 +65,7 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 1.7.2025 -> zrihtan slideshow. Vse funkcije (razen lutka) delujejo. Exit in restart delujeta normalno
 		TO DO: dodaj da če ni bluetooth povezave na ESP32, naj izpiše "Nimam povezave do naprave za stopnice, prosim vključi napravo za stopnice in ponovno zaženi to napravo"  al neki (na enak način recimo kot "Loading ...")
 
+7.7.2025 -> okolje za preizkus se zažene. Delujejo: simple barve, enacba, besedilna (na pol), stopmotion
+		to do: slideshow, complex barve. prej so complex barve delale
 3.7.2025 -> user okolje za pripravo je dokončano. Potrebno je še dodati inštalacije knjižnic za uporabnika (najraje zip zloudan vnaprej ready) in datoteko pretvoriti v .exe
 		to do: dopolniti navodila za uporabo z tem kako naj zajamejo/shranijo/pretvorijo slike 
