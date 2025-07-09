@@ -121,5 +121,5 @@ Okolje za preizkus gradiva za didaktične stopnice je obliki programske datoeke 
 Za preizkus je potrebno imeti gradivo pripravljeno na USB ključku, kot bi želeli zadevo pognati na nameščeni opremi na stopnišču (imenovanje, datoteke...).
 Tekom preizkušanja je mišljeno, da vnose stopnic simuliramo preko tipkovnice s pritiskom na tipko. Med pritiski pustite nekaj časa za uspešno procesiranje vnosa. Za izhod lahko namesto vnosa "25" pritisnete tipko "ESC", pri čemer je še vedno potrebno pritisniti omenjeno tipko petkrat.
 Na koncu preizkusa bo prikazan logotip Pedagoške Fakultete. V primeru vnosa obstaja možnost, da se bo okno "sesulo", ker je konec programa. V primeru nenavadnega delovanja, lahko zaprete okno s pomočjo miške.
--Opozorilo: uporaba tipkovnice je onemogočena v času delovanja programa, zato karkoli vnesete preko tipkovnice, bo program kot njemu namenjen vnos.
--Opozorilo: program je trenutno prilagojen le za Windows okolje.
+- Opozorilo: uporaba tipkovnice je onemogočena v času delovanja programa, zato karkoli vnesete preko tipkovnice, bo program kot njemu namenjen vnos.
+- Opozorilo: program je trenutno prilagojen le za Windows okolje.
