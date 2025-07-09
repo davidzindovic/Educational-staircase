@@ -6,12 +6,12 @@ Data is transmitted from the ESP32 to RPI via Bluetooth.
 <img src="/Images/Assembly13.png" alt="Part of the staircase with added hardware" width="400"/>
 <img src="/Images/Technical_drawing.JPG" alt="Technical Drawing" width="400"/>
 
-***
-## Hardware
+
+# Hardware
 - ESP32
 - MP3-TF player module
 - Mux 4051
 - Raspberry Pi 5
 <img src="/Hardware/PCB_render.png" alt="PCB render" width="400"/>
-***
+
 
