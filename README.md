@@ -12,6 +12,6 @@ Data is transmitted from the ESP32 to RPI via Bluetooth.
 - MP3-TF player module
 - Mux 4051
 - Raspberry Pi 5
-<img src="/Hardware/PCB_render.PNG" alt="Technical Drawing" width="400"/>
+<img src="/Hardware/PCB_render.PNG" alt="PCB render" width="400"/>
 ***
 
