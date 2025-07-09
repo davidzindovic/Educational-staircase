@@ -1,120 +1,3 @@
-import multiprocessing
-from multiprocessing import Process, Manager
-import traceback
-import gc
-from queue import Queue, Empty
-import keyboard
-# Fix for multiprocessing in frozen apps
-if getattr(sys, 'frozen', False):
-    from multiprocessing import freeze_support, set_start_method
-    freeze_support()
-    set_start_method('spawn')
-
-# Import the USB monitor from separate module
-from usb_monitor import usb_m, find_usb_drive
-
-#import traceback
-import sys
-#import gc
-import psutil
-import time
-
-#import time
-import threading
-
-def monitor_threads():
-    """Debugging tool to track thread leaks"""
-    try:
-        while True:
-            active = threading.active_count()
-            print(f"\n[ACTIVE THREADS: {active}]", end='', flush=True)
-            
-            # Only show details if thread count is high
-            if active > 5:
-                print("\nUnique threads:")
-                seen = set()
-                for thread in threading.enumerate():
-                    if thread.name not in seen:
-                        print(f"- {thread.name} (daemon={thread.daemon})")
-                        seen.add(thread.name)
-            
-            time.sleep(5)  # Reduced from 2 to 5 seconds
-    except Exception as e:
-        print(f"\nThread monitor crashed: {str(e)}")
-
-# Start the monitor (daemon=True ensures it won't block shutdown)
-threading.Thread(
-    target=monitor_threads,
-    name="ThreadMonitor",
-    daemon=True
-).start()
-
-#import psutil
-#import gc
-
-def monitor_memory():
-    """Improved memory monitoring with proper error handling"""
-    process = psutil.Process(os.getpid())
-    while True:
-        try:
-            # Safer Python memory calculation
-            py_mem = sum(
-                sys.getsizeof(obj) 
-                for obj in gc.get_objects() 
-                if not isinstance(obj, type)
-            ) / 1024 / 1024
-            
-            # Total process memory
-            total_mem = process.memory_info().rss / 1024 / 1024
-            
-            print(f"\n[PYTHON: {py_mem:.1f}MB | TOTAL: {total_mem:.1f}MB]", end='', flush=True)
-            
-            if int(time.time()) % 10 == 0:
-                gc.collect()
-                print(" [GC]", end='', flush=True)
-                
-            time.sleep(5)
-            
-        except Exception as e:
-            print(f"\nMEM MONITOR ERROR: {str(e)}")
-            time.sleep(10)  # Prevent spam on continuous errors
-
-# Start monitoring (add near your thread monitor)
-#threading.Thread(target=monitor_memory, daemon=True).start()
-# Start monitors like this to ensure proper initialization
-monitor_thread = threading.Thread(
-    target=monitor_memory,
-    name="MemoryMonitor",
-    daemon=True
-)
-monitor_thread.start()
-
-import tracemalloc
-
-def track_native_leaks():
-    tracemalloc.start()
-    while True:
-        snapshot = tracemalloc.take_snapshot()
-        top_stats = snapshot.statistics('traceback')
-        
-        print("\nTOP NATIVE ALLOCATORS:")
-        for stat in top_stats[:3]:  # Show top 3 leaks
-            print(f"{stat.size/1024:.1f} KB | {stat.traceback.format()[-1]}")
-        
-        time.sleep(10)
-
-# Start alongside other monitors
-threading.Thread(target=track_native_leaks, daemon=True).start()
-
-import signal
-#import sys
-
-def handle_shutdown(signum, frame):
-    print("\nShutting down gracefully...")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, handle_shutdown)  # Ctrl+C
-signal.signal(signal.SIGTERM, handle_shutdown)  # Termination signal
 
 import os
 from PIL import Image
@@ -126,26 +9,18 @@ import matplotlib.pyplot as plt
 #from matplotlib import pyplot as plt
 import cv2
 import numpy as np
-
-
+import time
+import threading
 import matplotlib.patches as patches
 import vlc
 import glob
 import ctypes
-#import queue
-from queue import Queue
-
+import queue
+import gc
 import keyboard
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #from bluetooth import *
 buf_size = 1024;
-
-# Global input system
-input_queue = Queue()
-keyboard_lock = threading.Lock()
-multi_digit_buffer = ""
-multi_digit_timeout = 1.5  # seconds
-last_digit_time = 0
 
 MAX_WIDTH = 1920
 MAX_HEIGHT = 1080
@@ -160,7 +35,6 @@ _tk_image_anchor=None
 '''
 
 # Add these with your other global variables
-exit_flag = False
 _image_window = None
 _image_label = None
 _image_keeper = None  # The secret weapon
@@ -187,35 +61,35 @@ final_number=False
 def on_key_press(event):
     global last_key_pressed, key_pressed_event, multi_digit_mode, current_number, number_start_time, exit_flag, final_number
     
-    print(f"Key event: {event.name} {event.event_type}")  # Debug
-    
     with input_lock:
         try:
-            # Start multi-digit mode on 'i' key down
+            # Start multi-digit mode
             if event.name == 'i' and event.event_type == keyboard.KEY_DOWN:
                 multi_digit_mode = True
-                final_number = False
+                final_number=False
                 current_number = ""
                 number_start_time = time.time()
-                print("Multi-digit mode started")  # Debug
+                return
+            elif event.name == 'i' and event.event_type == keyboard.KEY_UP and multi_digit_mode==True and final_number==False:
+                multi_digit_mode=False
+                final_number=True
                 return
             
-            # End multi-digit mode on 'i' key up if we have digits
-            elif event.name == 'i' and event.event_type == keyboard.KEY_UP and multi_digit_mode and current_number:
-                multi_digit_mode = False
-                final_number = True
-                print(f"Multi-digit number complete: {current_number}")  # Debug
-                return
-            
-            # Handle digit input during multi-digit mode
-            if multi_digit_mode and event.name.isdigit() and event.event_type == keyboard.KEY_DOWN:
-                current_number += event.name
-                number_start_time = time.time()
-                print(f"Digit added: {current_number}")  # Debug
-            
+            # Handle digit input
+            if event.name.isdigit() and event.event_type == keyboard.KEY_DOWN:
+                if multi_digit_mode:
+                    current_number += event.name
+                    number_start_time = time.time()
+                else:
+                    last_key_pressed = int(event.name)
+                    key_pressed_event.set()
+                    #if 0<last_key_pressed<26:
+                    #    final_number=True
+                    
             # Special keys work in any mode
             if event.event_type == keyboard.KEY_DOWN:
                 if event.name == 'esc':
+                    #exit_flag = True
                     last_key_pressed = 25
                     key_pressed_event.set()
                 elif event.name == 'enter':
@@ -225,93 +99,50 @@ def on_key_press(event):
         except Exception as e:
             print(f"Key error: {e}")
 
-def on_key_event(e):
-    """Handle all keyboard events"""
-    global multi_digit_buffer, last_digit_time
-    
-    with keyboard_lock:
-        if e.event_type == keyboard.KEY_DOWN:
-            if e.name == 'i':
-                # Start multi-digit mode
-                multi_digit_buffer = ""
-                last_digit_time = time.time()
-            elif e.name.isdigit() and multi_digit_buffer != "":
-                # Add to multi-digit buffer
-                multi_digit_buffer += e.name
-                last_digit_time = time.time()
-            else:
-                # Single key press
-                input_queue.put(e.name)
-
-'''
 def rx_and_echo():
     global last_key_pressed, multi_digit_mode, current_number, exit_flag, final_number
     
     with input_lock:
+        #if current_number!="":
+        #    print(f"multi: {multi_digit_mode}, current: {current_number}, exit: {exit_flag}")
         # Check for multi-digit completion
-        if multi_digit_mode and time.time() - number_start_time > MULTI_DIGIT_TIMEOUT:
+        if multi_digit_mode and time.time() - number_start_time > 1.5:
             if current_number:
                 try:
-                    num = int(current_number)
-                    if 1 <= num <= 25:  # Validate number range
-                        last_key_pressed = num
-                        print(f"Returning multi-digit number: {num}")  # Debug
-                    current_number = ""
-                    multi_digit_mode = False
-                    final_number = False
+                    last_key_pressed = int(current_number)
+                    #final_number=True
+                    if last_key_pressed == 25:
+                        exit_flag = True
                 except ValueError:
                     pass
+            #multi_digit_mode = False
+            #current_number = ""
         
-        # Return completed multi-digit number
-        if final_number and current_number:
-            try:
-                num = int(current_number)
-                if 1 <= num <= 25:  # Validate number range
-                    print(f"Returning final multi-digit number: {num}")  # Debug
-                    final_number = False
-                    current_number = ""
-                    return num
-            except ValueError:
-                pass
-        
-        # Return single key press
+        #if current_number!="":
+        #    print(f"multi: {multi_digit_mode}, current: {current_number}, exit: {exit_flag}")
+        #    print("--------------")        
+        if exit_flag:
+            #exit_flag=False
+            return 25
+            
+        if multi_digit_mode==False and final_number==True and current_number is not None:
+            if 0<int(current_number)<26:
+                print(f"kombinirano {int(current_number)}")
+                final_number=False
+                return int(current_number)
+            
         if last_key_pressed is not None:
             result = last_key_pressed
             last_key_pressed = None 
-            print(f"Returning single key: {result}")  # Debug
-            return result
+            
+            if multi_digit_mode==False and final_number==False:
+                print(f"navadna cifra: {result}")
+                final_number=False
+                return result
 
     # Small delay to prevent CPU overload
     time.sleep(0.05)
     return None
-'''
-
-def rx_and_echo():
-    """Your existing interface - modified for reliability"""
-    global multi_digit_buffer, last_digit_time
-    
-    with keyboard_lock:
-        # Check for completed multi-digit input
-        if multi_digit_buffer and time.time() - last_digit_time > multi_digit_timeout:
-            try:
-                num = int(multi_digit_buffer)
-                multi_digit_buffer = ""
-                if 1 <= num <= 25:
-                    return num
-            except ValueError:
-                multi_digit_buffer = ""
-        
-        # Return single key if available
-        try:
-            key = input_queue.get_nowait()
-            if key == 'esc':
-                return 25
-            elif key == 'enter':
-                return 3
-            elif key.isdigit():
-                return int(key)
-        except Empty:
-            return None
 
 # Initialize keyboard hooks
 keyboard.hook(on_key_press, suppress=False)
@@ -342,48 +173,22 @@ def rx_and_echo():
     # Return the key that was pressed
     return last_key_pressed
 '''
-'''
+
 # Remove all Bluetooth setup code and replace with this simple initialization
 def bluetooth_setup():
-    """Initialize keyboard input system"""
+    """Dummy function to replace Bluetooth setup"""
     print("Keyboard input system ready")
-    # Explicitly initialize keyboard
-    try:
-        keyboard.unhook_all()  # Clear any existing hooks
-        keyboard.hook(on_key_press, suppress=False)
-        print("Keyboard hooks initialized successfully")
-    except Exception as e:
-        print(f"Keyboard initialization error: {e}")
-'''
-def bluetooth_setup():
-    keyboard.unhook_all()
-    keyboard.hook(on_key_event, suppress=True)  # Change to suppress=True
-    print("Keyboard ready - hooks:", keyboard._hooks)
-
+    # No actual setup needed for keyboard
 #----------KEYBOARD KONC-----------------------
 
-def resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
-    if getattr(sys, 'frozen', False):
-        # PyInstaller creates a temp folder in _MEIPASS
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-        print(f"[RESOURCE] Base path: {base_path}")  # Debug
-    else:
-        base_path = os.path.abspath(".")
-    
-    path = os.path.join(base_path, relative_path)
-    print(f"[RESOURCE] Final path: {path}")  # Debug
-    return path
-
 #---------------USB----------------------------
-# Modify the USB detection to be more robust
-'''
 def find_usb_drive():
     """Find the USB drive named 'stopnice' on Windows"""
-    # First try all drives
-    for drive in range(65, 91):  # A-Z
-        drive_letter = f"{chr(drive)}:\\"
+    # Windows-based detection (check all drives)
+    for drive in range(65, 91):  # ASCII codes for A-Z
+        drive_letter = chr(drive) + ':\\'
         if os.path.exists(drive_letter):
+            # Check if this is our USB by looking for the name
             try:
                 volume_name = ctypes.create_unicode_buffer(1024)
                 ctypes.windll.kernel32.GetVolumeInformationW(
@@ -391,17 +196,11 @@ def find_usb_drive():
                     volume_name,
                     ctypes.sizeof(volume_name),
                     None, None, None, None, 0)
-                print(f"Checking drive {drive_letter}: {volume_name.value}")  # DEBUG
                 if "stopnice" in volume_name.value.lower():
-                    print(f"Found USB at {drive_letter}")  # DEBUG
                     return drive_letter
-            except Exception as e:
-                print(f"Error checking drive {drive_letter}: {e}")  # DEBUG
+            except:
                 continue
-    
-    print("USB not found after scanning all drives")  # DEBUG
     return None
-'''
 
 def read_and_split_file(file_name):
     usb_path = find_usb_drive()
@@ -541,84 +340,55 @@ def display_fullscreen_image_besedilna(image, iinput):
 
         #root.mainloop()
 
-def cleanup_windows():
-    global _image_window
-    if _image_window is not None:
-        try:
-            _image_window.destroy()
-        except:
-            pass
-        _image_window = None
-
 def close_img():
     global user_input, _image_window
     
-    if _image_window is None:
-        return
-        
-    def _close():
-        if _image_window and _image_window.winfo_exists():
-            _image_window.destroy()
-    
-    done_flag = False
+    done_flag=False
+
     while not done_flag:
         user_input = rx_and_echo()
-        if user_input is not None and 0 < int(user_input) < 26:
-            user_input = int(user_input)
-            safe_tk_call(_close)
-            done_flag = True
-            
-user_input="q"
-def besedilna_main(path_za_slike, naloga, resitev):
-    global user_input
-    print(f"Starting besedilna with params: {path_za_slike}, {naloga}, {resitev}")
-    cleanup_windows()
-    hide_loading_screen()
-    
-    try:
-        usb_path = find_usb_drive()
-        print(f"USB path: {usb_path}")
-        if not usb_path:
-            print("USB not found!")
-            return False
-            
-        folder_path = os.path.join(usb_path, "besedilna_slike", path_za_slike)
-        print(f"Looking for folder: {folder_path}")
         
-        if not os.path.isdir(folder_path):
-            print("Invalid folder path")
-            return False
-
-        user_input="q"
-        print("Creating initial image grid...")
-        combined_image = create_image_grid(folder_path, naloga, resitev)
-        if not combined_image:
-            print("Failed to create image grid")
-            return False
-            
-        print("Showing initial image...")
-        user_input = display_fullscreen_image(combined_image, 1)
-        
-        if not shared_state["present"]:
-            print("USB disconnected during task")
-            return False
-            
         if user_input is not None:
-            print("Showing result...")
-            combined_image = create_image_grid(folder_path, naloga, resitev)
-            if combined_image:
-                display_fullscreen_image(combined_image, 0)
-                
-        return True
+            if 0<int(user_input)<26:
+                user_input=int(user_input)
+                if _image_window:
+                    _image_window.after(0, _image_window.quit)
+                done_flag=True
+
+
+def besedilna_main(path_za_slike, naloga, resitev):
+    global shared_state, user_input
+    
+    hide_loading_screen()  # Hide loading before starting
+    
+    # Find USB drive
+    usb_path = find_usb_drive()
+    if not usb_path:
+        print("USB not found!")
+        return
         
-    except Exception as e:
-        print(f"Besedilna error: {e}")
-        traceback.print_exc()
-        return False
-    finally:
-        print("Besedilna cleanup")
-        show_loading_screen(0.1)
-        cleanup_windows()
+    folder_path = os.path.join(usb_path, "besedilna_slike", path_za_slike)
+    if not os.path.isdir(folder_path):
+        print("Invalid folder path")
+        return
+
+    user_input="q"
+    file_number = resitev
+    combined_image = create_image_grid(folder_path, naloga,file_number)
+
+    if combined_image:
+        #display_fullscreen_image_besedilna(combined_image,1)
+        display_fullscreen_image(combined_image, 1)
+
+    if file_number is None:
+        print("Error: Could not load the number from the file.")
+        return
+    
+    if shared_state["present"]:
+        combined_image = create_image_grid(folder_path, naloga,file_number)
+        display_fullscreen_image(combined_image, 0)
+    
+    show_loading_screen(0.1)  # Show loading briefly when done
 #--------------BESEDILNA KONC-------------------------------------
 
 #------------------ENAČBE----------------------
@@ -931,135 +701,81 @@ def plot_colors(colors,stevilo_barv):
     root.destroy()
 
 def complex_barvanje(colors):
-    """100% working color mixer with guaranteed input handling"""
+    """Interactive color mixing with persistent window"""
     root = tk.Tk()
+    # Proper fullscreen without window decorations
     root.overrideredirect(True)
     root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
     root.configure(bg='white')
 
-    # Create UI elements
     canvas = tk.Canvas(root, bg='white', highlightthickness=0)
     canvas.pack(fill=tk.BOTH, expand=True)
+
+    # Display legend
+    create_color_legend(canvas, colors, 50, 50)
     
+    # Current mixed color display
     current_color = "#ffffff"
     color_display = canvas.create_rectangle(
         400, 300, 700, 600,
         fill=current_color, outline="black", width=3
     )
+
     canvas.create_text(550, 250, text="Current Color", font=("Arial", 24))
-
-    # Color legend
-    box_size = 50
-    text_offset = 10
-    for i, color in enumerate(colors):
-        canvas.create_rectangle(
-            50, 50 + i*(box_size+10),
-            50 + box_size, 50 + i*(box_size+10) + box_size,
-            fill=color, outline="black"
-        )
-        canvas.create_text(
-            50 + box_size + text_offset, 50 + i*(box_size+10) + box_size//2,
-            text=f"{i+1}: {color}", anchor="w", font=("Arial", 16)
-        )
-
-    # State management
-    esc_presses = []
-    esc_time_window = 2.0
-    exit_flag = False
-
-    def handle_key_press(event):
-        nonlocal current_color, esc_presses, exit_flag
+    reset_count = 0  # Initialize reset counter
+    hide_loading_screen()
+    def update_display():
+        nonlocal current_color, reset_count
+        global exit_flag, final_number, current_number
         
-        # Process ESC key
-        if event.keysym == 'Escape':
-            now = time.time()
-            esc_presses = [t for t in esc_presses if now - t <= esc_time_window]
-            esc_presses.append(now)
+        selected_index=0
+        while True:
+            selected_index = rx_and_echo()
             
-            if len(esc_presses) == 1:
-                current_color = "#ffffff"
-                canvas.itemconfig(color_display, fill=current_color)
-            elif len(esc_presses) >= 5:
-                exit_flag = True
-                root.destroy()
-        
-        # Process number keys
-        elif event.char and event.char.isdigit():
-            color_index = int(event.char)
-            if 1 <= color_index <= len(colors):
-                current_color = blend_colors(current_color, colors[color_index-1])
-                canvas.itemconfig(color_display, fill=current_color)
-                esc_presses = []  # Reset ESC counter
+            if selected_index is not None:
+                print(f"index: {selected_index}")
+                if selected_index == 25:
+                    reset_count += 1
+                    if reset_count >= 5:
+                        exit_flag=False
+                        root.after(0, root.quit)
+                        break
+                    current_color = "#ffffff"
+                    canvas.itemconfig(color_display, fill=current_color)
+                    continue
+                else:
+                    reset_count = 0
+     
+                if selected_index is not None:
+                    if 1 <= selected_index <= len(colors):
+                        current_color = blend_colors(current_color, colors[selected_index-1])
+                        canvas.itemconfig(color_display, fill=current_color)
 
-    # Set up keyboard handling - THIS IS THE CRUCIAL FIX
-    keyboard.unhook_all()  # Remove any existing hooks
-    root.bind('<Key>', handle_key_press)
-    root.focus_force()
-    root.attributes('-topmost', True)
-    root.lift()
-
-    # Main loop with forced focus
-    last_focus_time = time.time()
-    while not exit_flag and shared_state["present"]:
-        try:
-            # Force focus every 0.5 seconds if needed
-            if time.time() - last_focus_time > 0.5:
-                root.focus_force()
-                root.lift()
-                root.attributes('-topmost', True)
-                last_focus_time = time.time()
-            
-            root.update_idletasks()
-            root.update()
-            time.sleep(0.01)
-        except:
-            break
-
-    # Cleanup
-    try:
-        root.unbind('<Key>')
-        root.destroy()
-    except:
-        pass
+    # Start input handler in separate thread
+    input_thread = threading.Thread(target=update_display)
+    input_thread.daemon = True
+    input_thread.start()
     
-    # Re-enable keyboard hooks for other functions
-    bluetooth_setup()
-    
-    return exit_flag
+    root.mainloop()
+    root.destroy()
 
 def barve_main(mode, attempts, colors_all):
+    global shared_state
     prepare_window_transition()
-    
+
     try:
-        colors = [c.strip() for c in colors_all.split(',') if c.strip()]
-        
-        if not colors:
-            print("Error: No valid colors provided")
-            return False
-            
+        colors = colors_all.split(',')
+
+        print(mode, colors)
         if mode == "simple":
-            return plot_colors(colors, attempts)
+            plot_colors(colors,attempts)
+
         elif mode == "complex":
-            show_loading_screen(0.1)
-            time.sleep(0.3)
-            
-            # Run color mixer and get explicit completion status
-            completed = complex_barvanje(colors)
-            
-            hide_loading_screen()
-            time.sleep(0.2)
-            
-            # DEBUG: Print completion status
-            print(f"Color mixer completed: {completed}")
-            return completed
-            
-    except Exception as e:
-        print(f"Color task failed: {e}")
-        traceback.print_exc()
-        return False
+            complex_barvanje(colors)
+        
     finally:
-        cv2.destroyAllWindows()
-        hide_loading_screen()
+        pass
+
 #------------------------BARVE KONC-------------------------------------
 
 #------------------------STOPMOTION------------------------------------- 
@@ -1139,67 +855,60 @@ def display_images(folder, mode):
 def display_image_one(image_path):
     global persistent_root
 
-    try:
-        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-        if img is None:
-            print(f"Error loading image: {image_path}")
-            return
+    # Read image with alpha channel if present
+    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    if img is None:
+        print(f"Error loading image: {image_path}")
+        return
 
-        # Get screen dimensions
-        screen_height, screen_width = 1080, 1920  # Adjust if needed for your display
+    # Get screen dimensions
+    screen_height, screen_width = 1080, 1920  # Adjust if needed for your display
 
-        # Handle transparency if present
-        if len(img.shape) == 3 and img.shape[2] == 4:
-            
-            img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGRA2RGBA)
-            
-            # Separate the alpha channel
-            alpha_channel = img[:, :, 3] / 255.0
-            img_rgb = img[:, :, :3]  # Remove the alpha channel
-            
-            # Create white background for blending
-            white_bg = np.ones_like(img_rgb, dtype=np.uint8) * 255
-            img = (img_rgb * alpha_channel[:, :, None] + 
-                   white_bg * (1 - alpha_channel[:, :, None])).astype(np.uint8)
-        elif len(img.shape)==3:
-            img=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        else:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-        # Calculate scaling while maintaining aspect ratio
-        img_height, img_width = img.shape[:2]
-        scale = min(screen_width / img_width, screen_height / img_height)
-        new_width = int(img_width * scale)
-        new_height = int(img_height * scale)
-
-        # Resize the image
-        resized_img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
-
-        # Calculate adaptive background color (average of edge pixels)
-        edge_pixels = np.concatenate([
-            img[0, :], img[-1, :], img[:, 0], img[:, -1]
-        ])
-        avg_color = np.mean(edge_pixels, axis=0).astype(int)
-        avg_color = tuple(map(int, avg_color))  # Convert to tuple
-
-        # Create canvas with adaptive background
-        canvas = np.full((screen_height, screen_width, 3), avg_color, dtype=np.uint8)
-
-        # Center the image on the canvas
-        x_offset = (screen_width - new_width) // 2
-        y_offset = (screen_height - new_height) // 2
-        canvas[y_offset:y_offset+new_height, x_offset:x_offset+new_width] = resized_img
+    # Handle transparency if present
+    if len(img.shape) == 3 and img.shape[2] == 4:
         
-        # Display image
-        display_img = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
-        return display_img
+        img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGRA2RGBA)
         
-    finally:
-        # Release native memory
-        if 'img' in locals():
-            img.release() if hasattr(img, 'release') else None
-            del img
-        cv2.waitKey(1)  # Flush OpenCV's internal buffers
+        # Separate the alpha channel
+        alpha_channel = img[:, :, 3] / 255.0
+        img_rgb = img[:, :, :3]  # Remove the alpha channel
+        
+        # Create white background for blending
+        white_bg = np.ones_like(img_rgb, dtype=np.uint8) * 255
+        img = (img_rgb * alpha_channel[:, :, None] + 
+               white_bg * (1 - alpha_channel[:, :, None])).astype(np.uint8)
+    elif len(img.shape)==3:
+        img=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+    # Calculate scaling while maintaining aspect ratio
+    img_height, img_width = img.shape[:2]
+    scale = min(screen_width / img_width, screen_height / img_height)
+    new_width = int(img_width * scale)
+    new_height = int(img_height * scale)
+
+    # Resize the image
+    resized_img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+    # Calculate adaptive background color (average of edge pixels)
+    edge_pixels = np.concatenate([
+        img[0, :], img[-1, :], img[:, 0], img[:, -1]
+    ])
+    avg_color = np.mean(edge_pixels, axis=0).astype(int)
+    avg_color = tuple(map(int, avg_color))  # Convert to tuple
+
+    # Create canvas with adaptive background
+    canvas = np.full((screen_height, screen_width, 3), avg_color, dtype=np.uint8)
+
+    # Center the image on the canvas
+    x_offset = (screen_width - new_width) // 2
+    y_offset = (screen_height - new_height) // 2
+    canvas[y_offset:y_offset+new_height, x_offset:x_offset+new_width] = resized_img
+    
+    # Display image
+    display_img = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
+    return display_img
 '''
 def stopmotion_main(folder, mode):
 	folder="/media/lmk/stopnice/stopmotion/"+folder
@@ -1289,292 +998,178 @@ def play_video(video_path, stop_event):
     player.release()
     instance.release()
     return stop_event.is_set()
-'''
+
 def run_slideshow(folder_name, mode, display_time):
-    global shared_state
-    
-    print(f"[Slideshow] Starting in folder: {folder_name}")
-    
-    if not os.path.exists(folder_name):
-        print(f"[Slideshow] Error: Folder not found: {folder_name}")
-        return None
-    
-    # Create and configure window
-    window_name = 'Slideshow_Window'
-    cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    
-    # Initial blank white image to force window creation
-    blank = np.ones((1080, 1920, 3), dtype=np.uint8) * 255
-    cv2.imshow(window_name, blank)
-    cv2.waitKey(100)  # Ensure window appears
-    
+    global shared_state, exit_flag
+
+    # Track VLC resources per-cycle
+    current_vlc_instance = None
+    current_player = None
     exit_requested = False
-    esc_presses = []
-    
-    def get_dominant_color(img):
-        """Get dominant color from image edges for background"""
-        pixels = np.concatenate([img[0], img[-1], img[:,0], img[:,-1]])
-        return np.median(pixels, axis=0).astype(np.uint8)
-    
-    def check_for_exit():
-        nonlocal exit_requested, esc_presses
-        key = cv2.waitKey(1) & 0xFF
-        if key == 27:  # ESC
-            esc_presses.append(time.time())
-            esc_presses = esc_presses[-5:]  # Keep last 5 presses
-            if len(esc_presses) == 5 and esc_presses[-1] - esc_presses[0] < 3.0:
-                exit_requested = True
-        elif key != 255:  # Any other key
-            exit_requested = True
-        return exit_requested
-    
-    try:
-        while not exit_requested and shared_state["present"]:  # Continuous loop
-            files = sorted([
-                f for f in os.listdir(folder_name)
-                if f.lower().endswith(('.png','.jpg','.jpeg','.mp4','.avi','.mov'))
-            ])
-            
-            for filename in files:
-                if exit_requested or not shared_state["present"]:
-                    break
-                
-                file_path = os.path.join(folder_name, filename)
-                print(f"[Slideshow] Displaying: {filename}")
-                
-                if filename.lower().endswith(('.png','.jpg','.jpeg')):
-                    # Read image with alpha channel if exists
-                    img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
-                    if img is None:
-                        continue
-                    
-                    # Handle transparency
-                    if len(img.shape) == 3 and img.shape[2] == 4:
-                        alpha = img[:,:,3] / 255.0
-                        img_rgb = img[:,:,:3]
-                        white_bg = np.ones_like(img_rgb) * 255
-                        img = (img_rgb * alpha[:,:,None] + white_bg * (1 - alpha[:,:,None])).astype(np.uint8)
-                    elif len(img.shape) == 2:
-                        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-                    
-                    # Resize maintaining aspect ratio
-                    h, w = img.shape[:2]
-                    scale = min(1920/w, 1080/h)
-                    new_w, new_h = int(w*scale), int(h*scale)
-                    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-                    
-                    # Create background
-                    bg_color = get_dominant_color(resized)
-                    canvas = np.full((1080, 1920, 3), bg_color, dtype=np.uint8)
-                    x_offset = (1920 - new_w) // 2
-                    y_offset = (1080 - new_h) // 2
-                    canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
-                    
-                    # Display image
-                    cv2.imshow(window_name, canvas)
-                    start_time = time.time()
-                    while (time.time() - start_time) < display_time:
-                        if check_for_exit():
-                            break
-                        cv2.waitKey(100)
-                
-                elif filename.lower().endswith(('.mp4','.avi','.mov')):
-                    cap = cv2.VideoCapture(file_path)
-                    if not cap.isOpened():
-                        continue
-                    
-                    # Get video properties
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    if fps <= 0:
-                        fps = 30
-                    frame_delay = int(1000/fps)
-                    
-                    while cap.isOpened() and not exit_requested:
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
-                        
-                        # Process frame
-                        h, w = frame.shape[:2]
-                        scale = min(1920/w, 1080/h)
-                        new_w, new_h = int(w*scale), int(h*scale)
-                        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
-                        
-                        bg_color = get_dominant_color(resized)
-                        canvas = np.full((1080, 1920, 3), bg_color, dtype=np.uint8)
-                        x_offset = (1920 - new_w) // 2
-                        y_offset = (1080 - new_h) // 2
-                        canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
-                        
-                        cv2.imshow(window_name, canvas)
-                        if check_for_exit():
-                            break
-                        cv2.waitKey(frame_delay)
-                    
-                    cap.release()
-                
-                if exit_requested:
-                    break
-            
-            if mode not in (4, 5, 6):  # Exit if not continuous mode
-                break
-                
-    finally:
-        cv2.destroyWindow(window_name)
-        cv2.waitKey(1)
-'''
-# Global flag for controlling slideshow exit
-global_slideshow_exit = False
-display_time=2
-def run_slideshow(folder_name, mode, display_time):
-    global exit_flag
-    
-    # Create and configure window first
-    window_name = 'Slideshow_Window'
-    cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    
-    # Initial blank white image to force window creation
-    blank = np.ones((1080, 1920, 3), dtype=np.uint8) * 255
-    cv2.imshow(window_name, blank)
-    cv2.waitKey(200)  # Wait for window to initialize
-    
-    esc_presses = []
-    exit_requested = False
-    
-    def get_dominant_color(img):
-        """Get dominant color from image edges for background"""
-        pixels = np.concatenate([img[0], img[-1], img[:,0], img[:,-1]])
-        return np.median(pixels, axis=0).astype(np.uint8)
-    
-    try:
-        files = sorted([
-            f for f in os.listdir(folder_name)
-            if f.lower().endswith(('.png','.jpg','.jpeg','.mp4','.avi','.mov'))
-        ])
+    restart_requested = False
+    cycle_count = 0
+
+    def clean_vlc_resources():
+        nonlocal current_vlc_instance, current_player
+        try:
+            if current_player:
+                current_player.stop()
+                time.sleep(0.3)  # Critical delay
+                current_player.release()
+                current_player = None
+            if current_vlc_instance:
+                time.sleep(0.3)  # Critical delay
+                current_vlc_instance.release()
+                current_vlc_instance = None
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        finally:
+            gc.collect()
+
+    def clean_all_resources():
+        clean_vlc_resources()
+        try:
+            cv2.destroyAllWindows()
+            for _ in range(3):
+                cv2.waitKey(1)
+        except:
+            pass
+
+    def input_monitor():
+        nonlocal exit_requested, restart_requested
+        global exit_flag
         
-        for filename in files:
-            if exit_requested or not shared_state["present"]:
-                break
+        reset_count = 0
+        while not exit_requested and not restart_requested:
+            user_input = rx_and_echo()
             
-            file_path = os.path.join(folder_name, filename)
-            
-            if filename.lower().endswith(('.png','.jpg','.jpeg')):
-                # Read image with alpha channel if exists
-                img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
-                if img is None:
-                    continue
-                
-                # Handle transparency
-                if len(img.shape) == 3 and img.shape[2] == 4:
-                    alpha = img[:,:,3] / 255.0
-                    img_rgb = img[:,:,:3]
-                    white_bg = np.ones_like(img_rgb) * 255
-                    img = (img_rgb * alpha[:,:,None] + white_bg * (1 - alpha[:,:,None])).astype(np.uint8)
-                elif len(img.shape) == 2:
-                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-                
-                # Resize maintaining aspect ratio
-                h, w = img.shape[:2]
-                scale = min(1920/w, 1080/h)
-                new_w, new_h = int(w*scale), int(h*scale)
-                resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-                
-                # Create background
-                bg_color = get_dominant_color(resized)
-                canvas = np.full((1080, 1920, 3), bg_color, dtype=np.uint8)
-                x_offset = (1920 - new_w) // 2
-                y_offset = (1080 - new_h) // 2
-                canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
-                
-                # Display image
-                cv2.imshow(window_name, canvas)
-                start_time = time.time()
-                while (time.time() - start_time) < display_time:
-                    # Check for exit flag from keyboard thread
-                    if exit_flag:
+            if user_input is not None and 0<int(user_input)<26:
+                if user_input == 25:  # Exit
+                    reset_count += 1
+                    if reset_count >= 5:
                         exit_requested = True
                         break
-                    
-                    # Process OpenCV events
-                    key = cv2.waitKey(100)
-                    if key == 27:  # ESC key from OpenCV
-                        esc_presses.append(time.time())
-                        # Keep only recent presses (within 3 seconds)
-                        esc_presses = [t for t in esc_presses if time.time() - t < 3.0]
-                        if len(esc_presses) >= 5:
-                            exit_requested = True
-                            break
-                    
-                    # Also check our global input system
-                    user_input = rx_and_echo()
-                    if user_input == 25:  # ESC from our input system
-                        esc_presses.append(time.time())
-                        esc_presses = [t for t in esc_presses if time.time() - t < 3.0]
-                        if len(esc_presses) >= 5:
-                            exit_requested = True
-                            break
-            
-            elif filename.lower().endswith(('.mp4','.avi','.mov')):
-                cap = cv2.VideoCapture(file_path)
-                if not cap.isOpened():
-                    continue
-                
-                # Get video properties
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                if fps <= 0:
-                    fps = 30
-                frame_delay = int(1000/fps)
-                
-                while cap.isOpened() and not exit_requested and shared_state["present"]:
-                    ret, frame = cap.read()
-                    if not ret:
+                elif user_input == 3:  # Restart
+                    reset_count += 1
+                    if reset_count >= 5:
+                        restart_requested = True
                         break
-                    
-                    # Process frame
-                    h, w = frame.shape[:2]
-                    scale = min(1920/w, 1080/h)
-                    new_w, new_h = int(w*scale), int(h*scale)
-                    resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
-                    
-                    bg_color = get_dominant_color(resized)
-                    canvas = np.full((1080, 1920, 3), bg_color, dtype=np.uint8)
-                    x_offset = (1920 - new_w) // 2
-                    y_offset = (1080 - new_h) // 2
-                    canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
-                    
-                    cv2.imshow(window_name, canvas)
-                    
-                    # Check both input systems
-                    key = cv2.waitKey(frame_delay)
-                    if key == 27:  # ESC from OpenCV
-                        esc_presses.append(time.time())
-                        esc_presses = [t for t in esc_presses if time.time() - t < 3.0]
-                        if len(esc_presses) >= 5:
-                            exit_requested = True
-                            break
-                    
-                    user_input = rx_and_echo()
-                    if user_input == 25:  # ESC from our input system
-                        esc_presses.append(time.time())
-                        esc_presses = [t for t in esc_presses if time.time() - t < 3.0]
-                        if len(esc_presses) >= 5:
-                            exit_requested = True
-                            break
-                
-                cap.release()
-            
-            if exit_requested or not shared_state["present"]:
-                break
+                else:
+                    reset_count = 0
+
+    def display_image_safe(img_path):
+        try:
+            img = display_image_a(img_path)
+            if img is None:
+                return False
+
+            # Create fresh window each time
+            cv2.namedWindow('Slideshow', cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty('Slideshow', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.imshow('Slideshow', img)
+            cv2.waitKey(1)
+
+            start_time = time.time()
+            while (time.time() - start_time) < display_time:
+                if exit_requested or restart_requested:
+                    return False
+                if cv2.waitKey(100) != -1:
+                    return False
+            return True
+        except Exception as e:
+            print(f"Image error: {e}")
+            return False
+        finally:
+            try:
+                cv2.destroyWindow('Slideshow')
+            except:
+                pass
+
+    def play_video_safe(video_path):
+        nonlocal current_vlc_instance, current_player
+        clean_vlc_resources()  # Clean any existing resources first
         
-        if mode not in (4, 5, 6) and shared_state["present"]:  # Exit if not continuous mode
-            pass
+        try:
+            # Initialize fresh VLC instance
+            current_vlc_instance = vlc.Instance('--no-xlib --quiet')
+            current_player = current_vlc_instance.media_player_new()
+            media = current_vlc_instance.media_new(video_path)
+            current_player.set_media(media)
+            current_player.set_fullscreen(True)
+            current_player.play()
+
+            # Wait for playback to start
+            start_time = time.time()
+            while not current_player.is_playing():
+                if exit_requested or restart_requested or (time.time() - start_time > 5.0):
+                    return False
+                time.sleep(0.1)
+
+            # Monitor playback
+            while current_player.is_playing():
+                if exit_requested or restart_requested:
+                    return False
+                time.sleep(0.1)
+
+            return True
+        except Exception as e:
+            print(f"Video error: {e}")
+            return False
+        finally:
+            clean_vlc_resources()
+
+    try:
+        # Main display loop
+        while (not exit_requested and 
+               not restart_requested and 
+               shared_state["present"]):
             
+            # Start input monitor
+            input_thread = threading.Thread(target=input_monitor, daemon=True)
+            input_thread.start()
+
+            # Get files
+            try:
+                files = sorted([f for f in os.listdir(folder_name) 
+                              if f.lower().endswith(('.png','.jpg','.jpeg','.mp4','.avi','.mov'))])
+                if not files:
+                    break
+            except Exception as e:
+                print(f"Directory error: {e}")
+                break
+
+            # Process files
+            for filename in files:
+                if exit_requested or restart_requested:
+                    exit_flag=False
+                    break
+
+                file_path = os.path.join(folder_name, filename)
+                ext = os.path.splitext(filename)[1].lower()
+
+                if ext in ('.png','.jpg','.jpeg'):
+                    display_image_safe(file_path)
+                elif ext in ('.mp4','.avi','.mov'):
+                    play_video_safe(file_path)
+
+            clean_all_resources()
+            cycle_count += 1
+            print(f"Completed cycle {cycle_count}")
+
+            if mode not in (4,5,6):  # Not in continuous mode
+                break
+
+            time.sleep(1.0)  # Pause between cycles
+
+    except Exception as e:
+        print(f"Slideshow error: {e}")
     finally:
-        cv2.destroyWindow(window_name)
-        cv2.waitKey(1)
-        exit_flag = False
+        clean_all_resources()
+        if restart_requested:
+            return "restart"
+        return None
+
+
 
 def slideshow_main(folder_name, mode, image_time):
     global shared_state
@@ -1703,49 +1298,76 @@ def display_image_with_borders(image_path, display_time):
 global_images=[]
 
 def display_fullscreen_image(image, iinput):
-    global _image_window, _image_label, _image_keeper
+    global _image_window, _image_label, _image_keeper, shared_state
+
+    # Convert image to RGB format upfront
+    pil_image = image.convert("RGB")
     
-    # Create new window if needed
+    # Create window if needed
     if _image_window is None or not _image_window.winfo_exists():
         _image_window = tk.Toplevel()
-        _image_window.attributes('-fullscreen', True)
-        _image_window.configure(bg='white')
-        _image_label = tk.Label(_image_window, bg='white')
-        _image_label.pack(fill=tk.BOTH, expand=True)
-    
-    try:
-        # Display the image
-        img_tk = ImageTk.PhotoImage(image)
-        _image_label.config(image=img_tk)
-        _image_keeper = img_tk  # Keep reference
-        
-        if iinput == 1:
-            # For input mode - wait for user input
-            user_input = None
-            while user_input is None and shared_state["present"]:
-                user_input = rx_and_echo()
-                _image_window.update()  # Keep the window responsive
-                time.sleep(0.05)
-            
-            return user_input
-            
-        elif iinput == 0:
-            # For result display - show for fixed time
-            start_time = time.time()
-            while (time.time() - start_time) < cakanje_pri_prikazu_pravilnega_rezultata:
-                _image_window.update()
-                time.sleep(0.05)
-            
-    except Exception as e:
-        print(f"Display error: {e}")
-    finally:
-        if _image_window:
-            _image_window.destroy()
-            _image_window = None
+        #_image_window=tk.Tk()
 
-def safe_tk_call(func):
-    if _image_window and _image_window.winfo_exists():
-        _image_window.after(0, func)
+        # Force true fullscreen
+        #_image_window.overrideredirect(True)
+        _image_window.geometry("{0}x{1}+0+0".format(
+            _image_window.winfo_screenwidth(), 
+            _image_window.winfo_screenheight()))
+
+        _image_window.attributes('-fullscreen', True)
+        _image_window.attributes('-topmost', True)
+        #_image_window.attributes('-fullscreen', True)
+        _image_window.configure(bg='white')  # Set default background to white
+
+        _image_label = tk.Label(_image_window, bg='white')  # White background
+        _image_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)  # Add padding
+
+    
+    # Create and anchor the image
+    img_tk = ImageTk.PhotoImage(pil_image)
+    _image_label.config(
+        image=img_tk,
+        bg='white',  # Ensure label background is white
+        compound='center'  # Center the image in the label
+    )
+
+    # THE CRITICAL LINE - makes reference permanent
+    _image_keeper = (_image_window, _image_label, img_tk)
+    
+    # Calculate scaling to fit screen while maintaining aspect ratio
+    screen_width = _image_window.winfo_screenwidth()
+    screen_height = _image_window.winfo_screenheight()
+    img_width, img_height = pil_image.size
+    
+    # Calculate maximum scale factor
+    scale = min(
+        (screen_width - 40) / img_width,  # Account for padding
+        (screen_height - 40) / img_height
+    )
+    
+    # Resize image if needed
+    if scale < 1:
+        new_size = (int(img_width * scale), int(img_height * scale))
+        pil_image = pil_image.resize(new_size, Image.LANCZOS)
+        img_tk = ImageTk.PhotoImage(pil_image)
+        _image_label.config(image=img_tk)
+        _image_keeper = (_image_window, _image_label, img_tk)  # Update reference
+
+    # Force full display update
+    _image_window.update_idletasks()
+    _image_window.update()
+
+    # Handle input and timing
+    if shared_state["present"]:
+        if iinput == 1:
+            input_thread = threading.Thread(target=close_img)
+            input_thread.daemon = True
+            input_thread.start()
+            _image_window.mainloop()
+        elif iinput == 0:
+            _image_window.after(cakanje_pri_prikazu_pravilnega_rezultata*1000, _image_window.quit)
+            _image_window.mainloop()
+            _image_window.destroy()
 #---------------------FULLSCREEN KONC---------------------------
 
 #---------------------ZA GLEDANJE PRISOTNOSTI USB-JA------------
@@ -1851,35 +1473,13 @@ def acces_usb_content():
     print("Accesing USB content ...")
 
 from multiprocessing import Process, Manager
-'''
+
 def usb_m(shared_state):
-    print("[USB] Monitor process started")
-    try:
-        while True:
-            try:
-                usb_path = find_usb_drive()
-                new_state = usb_path is not None
-                
-                if new_state != shared_state["present"]:
-                    print(f"[USB] State changed to: {new_state}")
-                    shared_state["present"] = new_state
-                    
-                if new_state:
-                    print(f"[USB] Found at: {usb_path}")
-                    # Verify file structure
-                    test_file = os.path.join(usb_path, "izvedba.txt")
-                    if os.path.exists(test_file):
-                        print("[USB] Task file exists")
-                    else:
-                        print(f"[USB] Missing task file at {test_file}")
-                
-            except Exception as e:
-                print(f"[USB ERROR] {str(e)}")
-            
-            time.sleep(1)
-    finally:
-        pass
-'''
+    """Windows-compatible USB monitor"""
+    while True:
+        # Check for USB drive named 'stopnice'
+        shared_state["present"] = check_usb_presence("stopnice")
+        time.sleep(0.5)
 #----------------------------- USB KONC ------------------------
 
 def display_image_a(image_path):
@@ -1985,31 +1585,10 @@ persistent_root = None
 persistent_canvas = None
 
 def initialize_display():
+    """Initialize the persistent display system"""
     global persistent_root, persistent_canvas
-    try:
-        print("Creating persistent window...")
-        # Use a new Tcl interpreter to avoid conflicts
-        tk.Tcl().eval('info patchlevel')  # Initialize Tcl first
-        
-        persistent_root = tk.Tk()
-        persistent_root.withdraw()  # Start hidden
-        persistent_root.attributes('-fullscreen', True)
-        persistent_root.configure(bg='white')
-        
-        # Use a frame as container
-        container = tk.Frame(persistent_root)
-        container.pack(fill=tk.BOTH, expand=True)
-        
-        persistent_canvas = tk.Canvas(container, bg='white', highlightthickness=0)
-        persistent_canvas.pack(fill=tk.BOTH, expand=True)
-        
-        # Force initial update
-        persistent_root.update_idletasks()
-        persistent_root.update()
-        print("Display initialized successfully")
-    except Exception as e:
-        print(f"DISPLAY INIT ERROR: {str(e)}")
-        raise
+    persistent_root, persistent_canvas = create_persistent_window()
+    persistent_root.update()  # Force window creation
 
 def show_white_screen():
     """Display a plain white screen"""
@@ -2053,21 +1632,16 @@ def show_loading_screen(duration=0.5):
     global persistent_root, persistent_canvas
     
     if persistent_root and persistent_canvas:
-        try:
-            persistent_root.deiconify()
-            persistent_canvas.delete("all")
-            persistent_canvas.create_text(
-                persistent_root.winfo_screenwidth()//2,
-                persistent_root.winfo_screenheight()//2,
-                text="Loading...", font=("Arial", 48), fill="black"
-            )
-            persistent_root.lift()
-            persistent_root.focus_force()
-            persistent_root.update()
-            return True
-        except:
-            return False
-    return False
+        persistent_root.deiconify()
+        persistent_canvas.delete("all")
+        persistent_canvas.create_text(
+            persistent_root.winfo_screenwidth()//2,
+            persistent_root.winfo_screenheight()//2,
+            text="Loading...", font=("Arial", 48), fill="black"
+        )
+        persistent_root.lift()  # Bring to front
+        persistent_root.focus_force()
+        persistent_root.update()
 
 def hide_loading_screen_after_new_window(new_window):
     """Hide loading screen only after new window is ready"""
@@ -2118,213 +1692,143 @@ def emergency_cleanup():
         pass
         
     try:
-        keyboard.unhook_all()
-    except:
-        pass
-        
-    try:
         if persistent_root:
             persistent_root.destroy()
     except:
         pass
         
-    # Clean up any remaining processes
-    try:
-        for p in multiprocessing.active_children():
-            p.terminate()
-    except:
-        pass
-        
-    # Force garbage collection
-    gc.collect()
-
-def emergency_cleanup():
-    """Forcefully clean up resources"""
-    try:
-        cv2.destroyAllWindows()
-    except:
-        pass
-        
-    try:
-        keyboard.unhook_all()
-    except:
-        pass
-        
-    try:
-        if persistent_root:
-            persistent_root.destroy()
-    except:
-        pass
-        
-    # Clean up any remaining processes
-    for p in multiprocessing.active_children():
-        p.terminate()
-
+    # Kill any remaining threads
+    for thread in threading.enumerate():
+        if thread != threading.main_thread():
+            try:
+                thread._stop()
+            except:
+                pass
+ 
 def main():
-    global shared_state
+    global shared_state, persistent_root, persistent_canvas
     
-    # Initialize multiprocessing manager first
+    # Initialize display system
+    initialize_display()
+    
     with Manager() as manager:
         shared_state = manager.dict()
-        shared_state["present"] = False  # Initial USB state
+        shared_state["present"] = True
         
-        try:
-            print("\n=== Starting Program ===\n")
-            
-            # Start monitoring threads
-            print("[1/4] Starting monitoring threads...")
-            threading.Thread(target=monitor_threads, daemon=True).start()
-            threading.Thread(target=monitor_memory, daemon=True).start() 
-            threading.Thread(target=track_native_leaks, daemon=True).start()
+        monitor = Process(target=usb_m, args=(shared_state,))
+        monitor.start()
+        
+        bluetooth_setup()
+        file_name = "izvedba.txt"
+        
+        while True:
 
-            # Initialize keyboard
-            print("[2/4] Initializing keyboard...")
-            bluetooth_setup()
+            # Initial loading screen
+            show_loading_screen(1.0)
+            #show_white_screen()
             
-            # Quick keyboard test
-            print("Keyboard test - press ESC to continue...")
-            start_time = time.time()
-            while time.time() - start_time < 5:  # 5 second timeout
-                key = rx_and_echo()
-                if key == 25:  # ESC
-                    print("Keyboard test successful")
-                    break
-                time.sleep(0.1)
-            
-            # Initialize display
-            print("[3/4] Initializing display...")
-            initialize_display()
-            
-            # Start USB monitor process
-            print("[4/4] Starting USB monitor...")
-            usb_monitor = Process(target=usb_m, args=(shared_state,))
-            usb_monitor.start()
-            
-            try: 
-                while True:  # Main application loop
-                    # Show loading screen while waiting for USB
+            # Wait for USB
+            while not shared_state["present"]:
+                hide_loading_screen()
+                show_screensaver()
+                while not shared_state["present"]:
+                    time.sleep(0.5)
+            print("cakam 5 sekund")
+            time.sleep(5)
+            print("konec cakanja")
+            # Load tasks
+            #show_loading_screen(1.0)
+            naloga = None
+            while naloga is None and shared_state["present"]:
+                naloga = read_and_split_file(file_name)
+                if naloga is None:
+                    time.sleep(1)
+
+            # Execute tasks
+            task_completed = False
+            naloga_index=0
+            while shared_state["present"] and not task_completed:
+                for task in naloga:
+                    if not shared_state["present"]:
+                        break
+                
+                    # Clear any existing windows
+                    cv2.destroyAllWindows()
+                    if _image_window:
+                        _image_window.destroy()
+                        
+                    # Show loading between tasks
                     show_loading_screen(0.3)
                     
-                    # Wait for USB to be inserted
-                    print("[DEBUG] Waiting for USB...")
-                    while not shared_state["present"]:
-                        if not show_screensaver():  # Fallback to white screen
-                            show_white_screen()
-                        time.sleep(0.5)
+                    # Execute task
+                    try:
+                        if task[0] == "besedilna":
+                            besedilna_main(task[1], task[2], task[3])
+                        elif task[0] == "enacba":
+                            enacba_main(task[1], task[2], task[3])
+                        elif task[0] == "barve":
+                            barve_main(task[1], task[2], task[3])
+                        elif task[0] == "stopmotion":
+                            stopmotion_main(task[1], task[2])
+                        elif task[0] == "slideshow":
+                            slideshow_main(task[1], task[2], task[3])
+                    except Exception as e:
+                        print(f"Error executing task: {e}")
+                        continue
+                        
+                    naloga_index += 1
                     
-                    # USB detected - load tasks
-                    print("[DEBUG] USB detected, loading tasks...")
-                    tasks = None
-                    while tasks is None and shared_state["present"]:
-                        try:
-                            tasks = read_and_split_file("izvedba.txt")
-                            if tasks is None:
-                                time.sleep(1)
-                        except Exception as e:
-                            print(f"[ERROR] Loading tasks: {e}")
-                            time.sleep(1)
-                    
-                    # Execute tasks if USB still present
-                    if shared_state["present"] and tasks:
-                        print("[DEBUG] Executing tasks...")
-                        for task in tasks:
-                            if not shared_state["present"]:  # Check if USB removed
-                                break
-                                
-                            try:
-                                # Show loading screen before each task
-                                show_loading_screen(0.1)
-                                time.sleep(0.3)
-                            
-                                task_type = task[0].strip().lower()
-                                print(f"[DEBUG] Running task: {task_type}")
-                                
-                                if task_type == "besedilna":
-                                    besedilna_main(task[1], task[2], task[3])
-                                elif task_type == "enacba":
-                                    enacba_main(task[1], task[2], task[3])
-                                elif task_type == "barve":
-                                    #barve_main(task[1], task[2], task[3])
-                                    if barve_main(task[1], task[2], task[3]):
-                                        # Only proceed if completed successfully
-                                        hide_loading_screen()
-                                        time.sleep(0.3)
-                                elif task_type == "stopmotion":
-                                    stopmotion_main(task[1], task[2])
-                                elif task_type == "slideshow":
-                                    slideshow_main(task[1], task[2], task[3])
-                                
-                                # Brief pause between tasks
-                                if shared_state["present"]:
-                                    hide_loading_screen()
-                                    time.sleep(0.3)
-                                    #show_loading_screen(0.1)
-                                    
-                            except Exception as e:
-                                print(f"[ERROR] Task failed: {e}")
-                                traceback.print_exc()
-                                emergency_cleanup()
-                    
-                    # Transition to screensaver
+                    # Brief loading screen between tasks
+                    if shared_state["present"] and naloga_index != len(naloga):
+                        show_loading_screen(0.3)
+                        time.sleep(0.3)  # Ensure loading screen is visible
+                
+                task_completed = True
+
+            # Transition to screensaver
+            #hide_loading_screen()
+            # In your main loop where you handle transitions:
+            # In your main loop:
+            if shared_state["present"]:
+                try:
+                    # Safe transition sequence
                     hide_loading_screen()
-                    cv2.destroyAllWindows()
-                    if not show_screensaver():
-                        show_white_screen()
+                    time.sleep(0.2)  # Increased delay
                     
-                    # Check for restart request
-                    reset_count = 0
-                    while shared_state["present"] and reset_count < 5:
-                        key = rx_and_echo()
-                        if key == 3:  # Enter key
+                    # Ensure all OpenCV windows are closed
+                    cv2.destroyAllWindows()
+                    time.sleep(0.1)
+                    
+                    # Show screensaver
+                    if not show_screensaver():
+                        # Fallback to white screen
+                        show_white_screen()
+                        
+                except Exception as e:
+                    print(f"Transition error: {e}")
+                    show_white_screen()
+                
+                # Wait for restart
+                reset_count = 0
+                #start_time = time.time()
+                #while time.time() - start_time < 30:  # 30s timeout
+                while shared_state["present"]:
+                    key = rx_and_echo()
+                    #print(f"cakam: {reset_count}, {key}")
+                    if key is not None:
+                        if int(key) == 3:
                             reset_count += 1
+                            if reset_count >= 5:
+                                break
                         else:
                             reset_count = 0
-                        time.sleep(0.1)
-    
-            except KeyboardInterrupt:
-                print("\nShutdown requested by user")
-                
-        except Exception as e:
-            print(f"\nFatal error: {e}")
-            traceback.print_exc()
-            emergency_cleanup()
-            
-        finally:
-            # Cleanup in case of any failure
-            print("\nPerforming final cleanup...")
-            try:
-                cv2.destroyAllWindows()
-            except:
-                pass
-            try:
-                keyboard.unhook_all()
-            except:
-                pass
-            try:
-                if 'persistent_root' in globals() and persistent_root:
-                    persistent_root.destroy()
-            except:
-                pass
-            print("=== Program ended ===")
-        '''
-        except KeyboardInterrupt:
-            print("\nShutting down by user request...")
-        except Exception as e:
-            print(f"\nFatal error: {e}")
-            traceback.print_exc()
-        finally:
-            # Cleanup
-            print("[DEBUG] Cleaning up...")
-            emergency_cleanup()
-            if 'usb_monitor' in locals() and usb_monitor.is_alive():
-                usb_monitor.terminate()
-                usb_monitor.join()
-            
-            print("=== Program ended ===")
-        '''
-        
+                #    time.sleep(0.1)
+            else:
+                hide_loading_screen()  # Hide loading FIRST
+                time.sleep(0.1)  # Brief delay
+                show_screensaver()  # Then show screensaver
+
+        monitor.terminate()
+
 if __name__=="__main__":
-
-    threading.Thread(target=monitor_threads, daemon=True).start()
-
     main()
