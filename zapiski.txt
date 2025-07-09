@@ -71,6 +71,6 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 7.7.2025 -> okolje za preizkus se zažene. Delujejo: simple barve, enacba, besedilna (na pol), stopmotion
 		to do: slideshow, complex barve. prej so complex barve delale
 
-8.7.2025 -> okolje za preizkus: slideshow dela (exit ni mogoč), complex barve ne sprejmejo inputov
+8.7.2025 -> okolje za preizkus: dokončano (exe na onedrive-u, build datoteke na gitu)
 
 9.7.2025 -> okolje za preizkus: slideshow dela, complex barve delajo. Complex barve prehitrjo exitajo, besedilna se ne naloži
