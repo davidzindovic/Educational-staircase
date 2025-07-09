@@ -74,4 +74,4 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 8.7.2025 -> okolje za preizkus: dokončano (exe na onedrive-u, build datoteke na gitu)
 
 9.7.2025 -> okolje za preizkus: slideshow dela, complex barve delajo. Complex barve prehitrjo exitajo, besedilna se ne naloži
-		to od: dopolni navodila za uporabo
+		to od: dopolni navodila za uporabo (detajli), preizkus/dopolni vnos večmestnih števil (i+_ _ )
