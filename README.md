@@ -4,7 +4,7 @@ Input data is processed by an ESP32, musical effects are played from an SD card 
 Data is transmitted from the ESP32 to RPI via Bluetooth.
 
 <img src="/Images/Assembly13.png" alt="Part of the staircase with added hardware" width="200"/>
-<img src="/Images/Technical drawing.jpg" alt="Technical Drawing" width="200"/>
+<img src="/Images/Technical_drawing.JPG" alt="Technical Drawing" width="200"/>
 
 ***
 ## Hardware
