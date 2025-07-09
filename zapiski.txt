@@ -72,3 +72,5 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 		to do: slideshow, complex barve. prej so complex barve delale
 
 8.7.2025 -> okolje za preizkus: slideshow dela (exit ni mogoč), complex barve ne sprejmejo inputov
+
+9.7.2025 -> okolje za preizkus: slideshow dela, complex barve delajo. Complex barve prehitrjo exitajo, besedilna se ne naloži
