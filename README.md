@@ -3,8 +3,8 @@ This project was constructed for use on the Faculty of Education, University of 
 Input data is processed by an ESP32, musical effects are played from an SD card with the help od MP3-TF player and visual effects are displayed on a projection/ screen via Raspberry Pi.
 Data is transmitted from the ESP32 to RPI via Bluetooth.
 
-<img src="/Images/Assembly13.png" alt="Part of the staircase with added hardware" width="200"/>
-<img src="/Images/Technical_drawing.JPG" alt="Technical Drawing" width="200"/>
+<img src="/Images/Assembly13.png" alt="Part of the staircase with added hardware" width="400"/>
+<img src="/Images/Technical_drawing.JPG" alt="Technical Drawing" width="400"/>
 
 ***
 ## Hardware
