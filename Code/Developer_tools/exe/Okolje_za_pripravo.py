@@ -2137,7 +2137,7 @@ def emergency_cleanup():
         
     # Force garbage collection
     gc.collect()
-
+'''
 def emergency_cleanup():
     """Forcefully clean up resources"""
     try:
@@ -2159,7 +2159,7 @@ def emergency_cleanup():
     # Clean up any remaining processes
     for p in multiprocessing.active_children():
         p.terminate()
-
+'''
 def main():
     global shared_state
     
@@ -2277,8 +2277,14 @@ def main():
                         key = rx_and_echo()
                         if key == 3:  # Enter key
                             reset_count += 1
-                        else:
+                            print(f"Restart count: {reset_count}/5")
+                        elif key is not None:  # Only reset on actual other key presses
                             reset_count = 0
+                        
+                        if reset_count >= 5:
+                            print("Performing safe restart...")
+                            #safe_restart()
+                        
                         time.sleep(0.1)
     
             except KeyboardInterrupt:
