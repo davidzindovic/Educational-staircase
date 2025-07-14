@@ -79,3 +79,5 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 
 11.07.2025 -> okolje za preizkus: dela, restart dela. Ni vnosa večmestnih števil
 		to do: rpi image backup, podrobnosti navodil za uporabo
+
+14.07.2025 -> startup script na rpi dela, usb mount dela
