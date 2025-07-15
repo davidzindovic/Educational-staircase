@@ -299,7 +299,7 @@ def besedilna_main(path_za_slike, naloga, resitev):
 change_flag=0
 aspect=0
 
-'''
+
 def display_slike(image_paths, reserve_space=True):
     """
     Displays all images in a single line in fullscreen with black bars on top and bottom,
@@ -364,8 +364,11 @@ def display_slike(image_paths, reserve_space=True):
         # Display in fullscreen
         cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.resizeWindow("Image Display", 1920, 1080)
+        cv2.moveWindow("Image Display", 0, 0)
         cv2.imshow("Image Display", cv2.cvtColor(final_image, cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)  # Ensure the window updates
+
 '''
 def display_slike(image_paths, reserve_space=True):
     """
@@ -422,22 +425,24 @@ def display_slike(image_paths, reserve_space=True):
             current_x += w
 
         # Create fullscreen window
-        cv2.destroyAllWindows()
-        cv2.namedWindow("Image Display", cv2.WINDOW_NORMAL)
+        #cv2.destroyAllWindows()
+        #cv2.namedWindow("Image Display", cv2.WINDOW_NORMAL)
+        
         #for _ in range(3):  # Multiple attempts to ensure fullscreen
         #    cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         #    time.sleep(0.1)
-        cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        #cv2.setWindowProperty("Image Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.resizeWindow("Image Display", 1920, 1080)
         cv2.moveWindow("Image Display", 0, 0)
 
         # Display the result
         cv2.imshow("Image Display", canvas)
-        cv2.waitKey(1)
+        cv2.waitKey(50)
 
     except Exception as e:
         print(f"Error in display_slike: {e}")
-
+'''
 def get_correct_answer(equation_text):
     """
     Extracts the correct answer before '_'
@@ -527,6 +532,7 @@ def enacba_main(path_za_slike, naloga, resitev):
     prepare_window_transition()
     
     try:
+        cv2.destroyAllWindows()
         image_folder = r"/media/lmk/stopnice/enacba_slike/"+path_za_slike
         correct_answer = resitev
         masked_text = mask_numbers_before_underscore(naloga)
@@ -534,6 +540,9 @@ def enacba_main(path_za_slike, naloga, resitev):
         
         # Initial display
         image_paths = [os.path.join(image_folder, name + ".JPG") for name in equation_parts]
+        
+        #cv2.destroyAllWindows()
+        #time.sleep(2)
         
         # Create OpenCV window first
         cv2.namedWindow("Image Display", cv2.WND_PROP_FULLSCREEN)
@@ -989,7 +998,7 @@ def display_image_one(image_path):
             x = (new_w - screen_width) // 2
             y = (new_h - screen_height) // 2
             img = img[y:y+screen_height, x:x+screen_width]
-
+        
         # Create window with these specific properties for Pi
         cv2.destroyAllWindows()
         cv2.namedWindow('stopmotion', cv2.WINDOW_NORMAL)
@@ -2056,6 +2065,8 @@ def show_screensaver():
         # Create new window
         cv2.namedWindow('screensaver', cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty('screensaver', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.resizeWindow('screensaver', 1920, 1080)
+        cv2.moveWindow('screensaver', 0, 0)
         
         # Load image safely
         img_path = "/home/lmk/Desktop/UL_PEF_logo.png"
