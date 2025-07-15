@@ -80,4 +80,7 @@ to-do: barve (nujno-kere so na voljo - legenda ipd.)
 11.07.2025 -> okolje za preizkus: dela, restart dela. Ni vnosa večmestnih števil
 		to do: rpi image backup, podrobnosti navodil za uporabo
 
-14.07.2025 -> startup script na rpi dela, usb mount dela
+14.07.2025 -> startup script na rpi dela, usb mount dela, rpi image backup narejen
+
+15.07.2025 -> headless boot script na rpi dela (ni optimiziran, je flickering, se vidi ko gre iz cropped v fullscreen
+		TO DO: optimiziranje navodil za uporabo, montaža HW
