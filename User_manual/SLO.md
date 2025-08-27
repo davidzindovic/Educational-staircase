@@ -1,6 +1,8 @@
+# Navodila za uporabo
+Didaktično stopnišče je nadgradnja obstoječega stopnišča, ki omogoča obogatitev sprehajalčeve poti po nadstropjih s pomočjo zvočnih in vizualnih učinkov. Korak na vsako stopnico sproži nov zvočni učinek, ki ga lahko odgovorna oseba spremeni z nalaganjem zvočnih datotek na SD kartico. Odziv na korak ni nujno le zvočen, saj v primeru prisotnosti primerno pripravljenega USB ključka se bodo tudi primerne vsebine predvajale na projekciji. Odgovorne osebe lahko pripravijo naloge (enačbe, povezovanje besed in slik, stopmotion, mešanje barv) ali pa diaprojekcijo.
 
 # Zvočni učinki
-Datoteke za zvočne učinke se bodo predvajale, ko stopimo na stopnico. V primeru, da se trenutna skladba še ni končala, in stopimo na naslednjo stopnico, potem bo trenutna skladba prekinjena in nova se bo predjvala.
+Datoteke za zvočne učinke se bodo predvajale, ko stopimo na stopnico. V primeru, da se trenutna skladba še ni končala, in stopimo na naslednjo stopnico, potem bo trenutna skladba prekinjena in nova se bo predvajala.
 Za prenos datotek za zvočne učinke na napravo uporabimo SD kartico.
 
 ### SD kartica
@@ -14,6 +16,7 @@ Opozorila:
     * na dnu okenca kliknete "Lastnosti".
     * Če vidite kje napisano ".mp3", potem je datoteka pripravljena
   - V primeru, da vaša datoteka ni v formatu MP3, lahko vašo datoteko pretvorite v MP3 s pomočjo https://online-audio-converter.com/
+  - Za lažje beleženja zaporedja zvokov lahko skladbe poimenujete s številkami ("1", "2" ...)
 ***
 
 # Vizualni učinki
@@ -41,7 +44,7 @@ Možni vizualni učinki oz. aplikacije so:
 Opozorilo: Za izbiro barve uporabite Color Picker na Googlu: https://g.co/kgs/LrNHnkX . S pomočjo okna in drsnika izberite barvo in prekopirajte napis zapisan pod "HEX" (npr. #fcba03).
 
 ### Ukazi za vizualne učinke
-Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" vpišete ukaze v obliki, ki je primerna za aplikacijo:
+Svoja navodila napišete tako, da v tekstovno datoteko "izvedba" na USB ključku vpišete ukaze v obliki, ki je primerna za aplikacijo:
 - Enostavno mešanje barv: `barve:simple;število_možnih_vnosov!barva_hex_1,barva_hex_2`
   - Do vsake izmed napisanih HEX barv lahko dostopamo z eno stopnico.
   - primer: `barve:simple;3!#eb4034,#eb4034,#495446,#aba295,#8a6a91`
@@ -102,7 +105,7 @@ Naprava je sestavljena iz dveh delov:
 - drugi prejema podatke o korakanju po stopnicah in prikazuje vizualne učinke
 
 ### Zvok/projekcija
-Oba dela naprave se ob vklopu naprave povežeta. Za vklop zvoka je potrebno stikalo za zvok premakniti na noto. Za vklop prikaza je potrebno stikalo za prikaz premakniti na projekcijo.
+Oba dela naprave se ob vklopu naprave povežeta. Za vklop zvoka je potrebno stikalo za zvok premakniti (pritisniti notri) na noto. Za vklop prikaza je potrebno stikalo za prikaz premakniti na projekcijo.
 
 ### Manjkajoč USB
 Ob vklopu drugi del naprave prebere vsebino USB ključka in samodejno začne z izvajanjem nalog. V primeru, da USB ključek ob vklopu ni vstavljen ali pa če USB ključek med delovanjem odstranite, se bo prikazalo ozadje (PEF logo). Če USB ni bil vstavljen ob vklopu, se bo program samodejno zagnal nekaj sekund po vstavitvi USB ključka. Če ste USB ključek odstranili med delovanjem naprave ali pa po zaključku delovanja programa, je potrebno po ponovni vstavitvi program ponovno zagnati (glej naslednje poglavje).
@@ -117,9 +120,9 @@ V primeru, da naprava za projekcijo ne bo imela povezave z napravo za zvok in br
 
 # Okolje za preizkus gradiva za didaktične stopnice
 
-Okolje za preizkus gradiva za didaktične stopnice je obliki programske datoeke (.exe), ki jo lahko zaženemo z dvojnim levim klikom na datoteko.
+Okolje za preizkus gradiva za didaktične stopnice je obliki zagonske programske datoteke (.exe), ki jo lahko zaženemo z dvojnim levim klikom na datoteko.
 Za preizkus je potrebno imeti gradivo pripravljeno na USB ključku, kot bi želeli zadevo pognati na nameščeni opremi na stopnišču (imenovanje, datoteke...).
 Tekom preizkušanja je mišljeno, da vnose stopnic simuliramo preko tipkovnice s pritiskom na tipko. Med pritiski pustite nekaj časa za uspešno procesiranje vnosa. Za izhod lahko namesto vnosa "25" pritisnete tipko "ESC", pri čemer je še vedno potrebno pritisniti omenjeno tipko petkrat.
 Na koncu preizkusa bo prikazan logotip Pedagoške Fakultete. V primeru vnosa obstaja možnost, da se bo okno "sesulo", ker je konec programa. V primeru nenavadnega delovanja, lahko zaprete okno s pomočjo miške.
-- Opozorilo: uporaba tipkovnice je onemogočena v času delovanja programa, zato karkoli vnesete preko tipkovnice, bo program kot njemu namenjen vnos.
+- Opozorilo: uporaba tipkovnice je onemogočena v času delovanja programa, zato karkoli vnesete preko tipkovnice, bo program vzel kot njemu namenjen vnos.
 - Opozorilo: program je trenutno prilagojen le za Windows okolje.
