@@ -700,7 +700,7 @@ def plot_colors(colors,stevilo_barv):
         while True:
             selected_index = rx_and_echo()
             
-            if selected_index == 25:
+            if selected_index == 22:
                 reset_count += 1
                 if reset_count >= 5:
                     root.after(0, root.quit)
@@ -763,7 +763,7 @@ def complex_barvanje(colors):
         while True:
             selected_index = rx_and_echo()
             
-            if selected_index == 25:
+            if selected_index == 22:
                 reset_count += 1
                 if reset_count >= 5:
                     root.after(0, root.quit)
@@ -842,7 +842,7 @@ def display_images(folder, mode):
             stop_flag=True
             break
         
-        if user_input == 25:  # Exit condition
+        if user_input == 22:  # Exit condition
             cnt25+=1
         else:
             cnt25=0
@@ -1241,7 +1241,7 @@ def run_slideshow(folder_name, mode, display_time):
         reset_count = 0
         while not exit_requested and not restart_requested:
             user_input = rx_and_echo()
-            if user_input == 25:  # Exit
+            if user_input == 22:  # Exit
                 reset_count += 1
                 if reset_count >= 5:
                     exit_requested = True
