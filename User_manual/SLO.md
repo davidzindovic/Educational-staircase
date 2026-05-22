@@ -7,7 +7,7 @@ Za prenos datotek za zvočne učinke na napravo uporabimo SD kartico.
 
 ### SD kartica
 Opozorila:
-- Na SD kartici naj bo največ 25 skladb (ker je 25 stopnic vse skupaj).
+- Na SD kartici naj bo največ 22 skladb (ker je 22 stopnic vse skupaj v uporabi).
   - SD kartico je potrebno v primeru nakupa nova SD kartice ponastaviti s pomočjo "SD Card Formatter".
 - Skladbe morajo biti v formatu MP3.
   - To lahko preverite tako, da:
@@ -111,7 +111,7 @@ Oba dela naprave se ob vklopu naprave povežeta. Za vklop zvoka je potrebno stik
 Ob vklopu drugi del naprave prebere vsebino USB ključka in samodejno začne z izvajanjem nalog. V primeru, da USB ključek ob vklopu ni vstavljen ali pa če USB ključek med delovanjem odstranite, se bo prikazalo ozadje (PEF logo). Če USB ni bil vstavljen ob vklopu, se bo program samodejno zagnal nekaj sekund po vstavitvi USB ključka. Če ste USB ključek odstranili med delovanjem naprave ali pa po zaključku delovanja programa, je potrebno po ponovni vstavitvi program ponovno zagnati (glej naslednje poglavje).
 
 ### Prekinitev in ponovni zagon
-Prekinitev delovanja aplikacije brez konca (kompleksno mešanje barv, stopmotion, slideshow) dosežemo tako, da petkrat zapored stopimo na zadnjo (25.) stopnico. Program ponovno zaženemo tako, da petkrat stopimo na tretjo (3.) stopnico.
+Prekinitev delovanja aplikacije brez konca (kompleksno mešanje barv, stopmotion, slideshow) dosežemo tako, da petkrat zapored stopimo na zadnjo (22.) stopnico. Program ponovno zaženemo tako, da petkrat stopimo na tretjo (3.) stopnico.
 
 Če želimo napravo ponovno zagnati, je potrebno stikalo za vklop naprave premakniti v lego, da bo spodnji del notri pritisnjen (ugasnjeno stanje), nato počakati vsaj 5 sekund in nato premakniti stikalo v nasprotno pozicijo (vklopljeno stanje).
 
