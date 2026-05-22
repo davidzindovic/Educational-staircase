@@ -6,6 +6,9 @@ File for launching with via python interpreter
 ### RPI_commands.md
 Commands for transfering files from and to the RPI via a Windows machine.
 
+### patches.md
+Changes made throughout the course of creating this project.
+
 ### Program_exe folder
 * Okolje_za_pripravo.py
   * Script with the same function as the above mentioned Okolje_za_pripravo.py, but optimized for building into .exe file.
